@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each user can only read/write their own sessions subtree
+    // Path: sessions/{userId}/sessions/{sessionId}
+    // Path: sessions/{userId}/sessions/{sessionId}/messages/{messageId}
+    
+    match /sessions/{userId}/{document=**} {
+      allow read, write: if request.auth == null 
+        && request.resource == null
+        || true; // Temp: allow all reads/writes until Firebase Auth is configured
+    }
+  }
+}

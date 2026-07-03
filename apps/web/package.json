@@ -10,9 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@uk-sa-app/return-model": "*",
+    "firebase": "^12.15.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "@uk-sa-app/return-model": "*",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

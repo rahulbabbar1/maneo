@@ -94,12 +94,16 @@ export default function App() {
     }
     // Simple mock credential check
     if (loginUser.toLowerCase() === 'admin' || loginUser.toLowerCase() === 'rahul') {
+      const uid = loginUser.toLowerCase();
       setIsAuthenticated(true);
       setUsername(loginUser);
       setUserRole(loginRole);
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('username', loginUser);
       localStorage.setItem('userRole', loginRole);
+      // Boot Firestore session loading
+      useChatStore.getState().setUserId(uid);
+      useChatStore.getState().loadSessions();
       setLoginError('');
     } else {
       setLoginError('Invalid username or password. Try "admin" or "rahul".');
@@ -124,6 +128,15 @@ export default function App() {
   // Zustand Stores
   const { updateField, calculateTax, loading, error } = useReturnStore();
   const { sessions, activeSessionId, createSession, setActiveSession, addMessageToActiveSession, updateActiveSessionReturn } = useChatStore();
+
+  // On mount: re-attach Firestore if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && username) {
+      const uid = username.toLowerCase();
+      useChatStore.getState().setUserId(uid);
+      useChatStore.getState().loadSessions();
+    }
+  }, []);
 
   // Derive active session data
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
