@@ -304,8 +304,8 @@ export default function App() {
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
-            <h2>UK Self Assessment</h2>
-            <p>Agent Portal Sandbox</p>
+            <h2>Maneo</h2>
+            <p>UK Self Assessment Sandbox</p>
           </div>
           <form onSubmit={handleLogin}>
             {loginError && <div className="login-error">{loginError}</div>}
@@ -357,9 +357,9 @@ export default function App() {
       {/* ── Sidebar ── */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="sidebar-logo">SA</div>
+          <div className="sidebar-logo">M</div>
           <div className="sidebar-brand">
-            <span className="sidebar-brand-name">TaxAssist AI</span>
+            <span className="sidebar-brand-name">Maneo</span>
             <span className="sidebar-brand-sub">Self Assessment 2025-26</span>
           </div>
         </div>

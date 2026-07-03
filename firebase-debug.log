@@ -1,0 +1,28 @@
+[debug] [2026-07-03T21:06:44.998Z] ----------------------------------------------------------------------
+[debug] [2026-07-03T21:06:45.001Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\rahul\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --project uk-self-assessment
+[debug] [2026-07-03T21:06:45.001Z] CLI Version:   15.22.4
+[debug] [2026-07-03T21:06:45.001Z] Platform:      win32
+[debug] [2026-07-03T21:06:45.001Z] Node Version:  v24.14.0
+[debug] [2026-07-03T21:06:45.002Z] Detected Agent: antigravity
+[debug] [2026-07-03T21:06:45.002Z] Time:          Fri Jul 03 2026 22:06:45 GMT+0100 (British Summer Time)
+[debug] [2026-07-03T21:06:45.002Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-03T21:06:47.635Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-03T21:06:47.719Z] Running auto auth
+[debug] [2026-07-03T21:06:47.719Z] [iam] checking project uk-self-assessment for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-07-03T21:06:47.720Z] No OAuth tokens found
+[debug] [2026-07-03T21:06:47.722Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/uk-self-assessment:testIamPermissions [none]
+[debug] [2026-07-03T21:06:47.722Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/uk-self-assessment:testIamPermissions  x-goog-user-project=uk-self-assessment
+[debug] [2026-07-03T21:06:47.722Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/uk-self-assessment:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-07-03T21:06:48.317Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/uk-self-assessment:testIamPermissions 200
+[debug] [2026-07-03T21:06:48.317Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/uk-self-assessment:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-07-03T21:06:48.318Z] No OAuth tokens found
+[debug] [2026-07-03T21:06:48.319Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/uk-self-assessment [none]
+[debug] [2026-07-03T21:06:48.604Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/uk-self-assessment 200
+[debug] [2026-07-03T21:06:48.604Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/uk-self-assessment {"projectId":"uk-self-assessment","projectNumber":"1014225777564","displayName":"uk-self-assessment","name":"projects/uk-self-assessment","resources":{"hostingSite":"uk-self-assessment"},"state":"ACTIVE","etag":"1_ef7af18c-a1a9-4963-b95f-9b0376a73445"}
+[info] 
+[info] === Deploying to 'uk-self-assessment'...
+[info] 
+[info] i  deploying hosting 
+[debug] [2026-07-03T21:06:48.608Z] No OAuth tokens found
+[debug] [2026-07-03T21:06:48.608Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/uk-self-assessment/sites/uk-self-assessment [none]
