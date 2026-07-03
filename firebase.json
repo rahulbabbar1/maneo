@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "maneo",
     "public": "apps/web/dist",
     "ignore": [
       "firebase.json",
