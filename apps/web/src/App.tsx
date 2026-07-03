@@ -115,14 +115,6 @@ export default function App() {
   };
 
   const [activeTab, setActiveTab] = useState<'chat' | 'SA100' | 'SA102' | 'SA106' | 'SA109'>('chat');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'bot',
-      text: 'Welcome to the UK Self Assessment Filing Assistant. I\'ll guide you through preparing your 2025-26 tax return.\n\nLet\'s begin — are you filing for a new client or a returning client?',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0);
@@ -130,13 +122,33 @@ export default function App() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Zustand Stores
-  const { returnObj, computation, updateField, calculateTax, loading, error } = useReturnStore();
-  const { sessions, activeSessionId, createSession, setActiveSession } = useChatStore();
+  const { updateField, calculateTax, loading, error } = useReturnStore();
+  const { sessions, activeSessionId, createSession, setActiveSession, addMessageToActiveSession, updateActiveSessionReturn } = useChatStore();
+
+  // Derive active session data
+  const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
+  const messages: Message[] = activeSession?.messages || [];
+  const returnObj = activeSession?.returnObj;
+  const computation = activeSession?.computation;
+
+  // Sync return obj to useReturnStore when session changes
+  useEffect(() => {
+    if (returnObj) {
+      useReturnStore.setState({ returnObj, computation: activeSession?.computation || null });
+    }
+  }, [activeSessionId]);
 
   // Trigger initial calculation on mount
   useEffect(() => {
     calculateTax();
   }, []);
+
+  // Reset phase to 0 when switching sessions
+  useEffect(() => {
+    setCurrentPhase(0);
+    setInputText('');
+    setActiveTab('chat');
+  }, [activeSessionId]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -155,7 +167,7 @@ export default function App() {
   // Send message to Fastify BFF Orchestrator
   const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText;
-    if (!text.trim()) return;
+    if (!text.trim() || !activeSession) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -164,9 +176,18 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // Persist user message to store immediately
+    addMessageToActiveSession(userMessage);
     if (!textToSend) setInputText('');
     setIsTyping(true);
+
+    // Build conversation history for context (exclude welcome message, convert to API format)
+    const historyForAPI = activeSession.messages
+      .filter(m => m.id !== '1') // skip the initial greeting
+      .map(m => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        parts: [{ text: m.text }],
+      }));
 
     try {
       const response = await fetch(`${API_BASE}/api/chat`, {
@@ -174,8 +195,9 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          returnObj,
-          taxYear: returnObj.taxYear,
+          returnObj: activeSession.returnObj,
+          taxYear: activeSession.returnObj?.taxYear || '2025-26',
+          history: historyForAPI,
         }),
       });
 
@@ -184,17 +206,17 @@ export default function App() {
       const data = await response.json();
       setIsTyping(false);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'bot',
-          text: data.reply,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: data.reply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
 
+      // Persist bot message and computation to store
+      addMessageToActiveSession(botMessage);
       if (data.calculation) {
+        updateActiveSessionReturn(activeSession.returnObj, data.calculation);
         useReturnStore.setState({ computation: data.calculation });
       }
 
@@ -211,15 +233,13 @@ export default function App() {
       }
     } catch {
       setIsTyping(false);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'bot',
-          text: 'I\'m unable to reach the orchestrator server right now. Your local calculations are still running — please check the computation panel.',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
+      const errMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: 'I\'m unable to reach the orchestrator server right now. Your local calculations are still running — please check the computation panel.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      addMessageToActiveSession(errMsg);
     }
   };
 
@@ -228,15 +248,12 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        sender: 'user',
-        text: `📎 Uploaded: ${file.name}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
+    addMessageToActiveSession({
+      id: Date.now().toString(),
+      sender: 'user',
+      text: `📎 Uploaded: ${file.name}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
     setIsTyping(true);
 
     setTimeout(() => {
@@ -252,8 +269,8 @@ export default function App() {
   };
 
   const confirmExtraction = () => {
-    if (!extractedData) return;
-    const newEmpIndex = returnObj.sa102.length;
+    if (!extractedData || !activeSession) return;
+    const newEmpIndex = (activeSession.returnObj?.sa102 || []).length;
     updateField(`sa102[${newEmpIndex}]`, {
       employerName: extractedData.employerName,
       employerRef: extractedData.employerRef,
@@ -263,15 +280,12 @@ export default function App() {
       expenses: { businessTravel: 0, professionalFees: 0, otherExpenses: 0 },
     });
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        sender: 'bot',
-        text: `✅ P60 data confirmed for **${extractedData.employerName}**\n\n• Gross Pay: £${extractedData.grossPay.toLocaleString()}\n• Tax Deducted: £${extractedData.taxDeducted.toLocaleString()}\n\nAdded to your SA102 employment schedule. The computation panel has been updated.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
+    addMessageToActiveSession({
+      id: Date.now().toString(),
+      sender: 'bot',
+      text: `✅ P60 data confirmed for **${extractedData.employerName}**\n\n• Gross Pay: £${extractedData.grossPay.toLocaleString()}\n• Tax Deducted: £${extractedData.taxDeducted.toLocaleString()}\n\nAdded to your SA102 employment schedule. The computation panel has been updated.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
 
     setShowExtractionModal(false);
     setExtractedData(null);
