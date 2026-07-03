@@ -1,0 +1,19 @@
+{
+  "name": "@uk-sa-app/orchestrator",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@google-cloud/vertexai": "^1.1.0",
+    "fastify": "^4.26.2",
+    "@fastify/cors": "^9.0.1",
+    "@uk-sa-app/return-model": "*",
+    "@uk-sa-app/tax-config": "*",
+    "@modelcontextprotocol/sdk": "^1.0.1"
+  }
+}

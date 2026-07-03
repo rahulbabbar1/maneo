@@ -1,0 +1,6 @@
+{
+  "name": "@uk-sa-app/hmrc-artefacts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vendored HMRC XSD schemas, GovTalk envelopes, and parameter mapping tables"
+}

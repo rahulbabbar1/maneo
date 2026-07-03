@@ -1,0 +1,19 @@
+{
+  "name": "uk-self-assessment-filing-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-Assisted UK Self Assessment Filing App Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspace @uk-sa-app/return-model && npm run build --workspace @uk-sa-app/tax-config && npm run build --workspace @uk-sa-app/tax-core && npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

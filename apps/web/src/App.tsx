@@ -1,0 +1,627 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useReturnStore } from './store/useReturnStore.js';
+import { useChatStore, type Session } from './store/useChatStore.js';
+import { FormRenderer } from './components/form-renderer.js';
+import './App.css';
+
+interface Message {
+  id: string;
+  sender: 'user' | 'bot';
+  text: string;
+  timestamp: string;
+}
+
+const PHASES = [
+  { key: 'onboard', label: 'Onboard' },
+  { key: 'residence', label: 'Residence' },
+  { key: 'income', label: 'Income' },
+  { key: 'reliefs', label: 'Reliefs' },
+  { key: 'review', label: 'Review' },
+  { key: 'declare', label: 'Declare' },
+  { key: 'submit', label: 'Submit' },
+];
+
+// Quick reply chips per phase
+const PHASE_CHIPS: Record<string, { label: string; message: string }[]> = {
+  onboard: [
+    { label: 'New client filing', message: 'I am filing for a new client' },
+    { label: 'Returning client', message: 'I am filing for an existing client' },
+  ],
+  residence: [
+    { label: 'UK Resident (190 days)', message: 'I was in the UK for 190 days in the 2025-26 tax year' },
+    { label: 'Non-resident', message: 'I was not a UK resident in 2025-26' },
+    { label: 'Split year treatment', message: 'I arrived in the UK part way through the year' },
+  ],
+  income: [
+    { label: 'Upload P60', message: 'I want to upload my P60 document' },
+    { label: 'Add employment', message: 'I want to add employment income manually' },
+    { label: 'Foreign income', message: 'I have foreign income to declare' },
+    { label: 'Capital gains', message: 'I have capital gains to declare' },
+  ],
+  reliefs: [
+    { label: 'Claim FTCR', message: 'I want to claim Foreign Tax Credit Relief' },
+    { label: 'Claim OWR', message: 'I want to claim Overseas Workday Relief' },
+    { label: 'Gift Aid', message: 'I made Gift Aid donations' },
+  ],
+  review: [
+    { label: 'Looks correct', message: 'The computation looks correct, proceed to declaration' },
+    { label: 'I need to edit', message: 'I need to make corrections before filing' },
+  ],
+  declare: [
+    { label: 'I confirm the declaration', message: 'I confirm all information is correct and wish to submit' },
+  ],
+  submit: [],
+};
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<'chat' | 'SA100' | 'SA102' | 'SA106' | 'SA109'>('chat');
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      sender: 'bot',
+      text: 'Welcome to the UK Self Assessment Filing Assistant. I\'ll guide you through preparing your 2025-26 tax return.\n\nLet\'s begin — are you filing for a new client or a returning client?',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState(0);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Zustand Stores
+  const { returnObj, computation, updateField, calculateTax, loading, error } = useReturnStore();
+  const { sessions, activeSessionId, createSession, setActiveSession } = useChatStore();
+
+  // Trigger initial calculation on mount
+  useEffect(() => {
+    calculateTax();
+  }, []);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  // Modal State for mock P60 extraction
+  const [showExtractionModal, setShowExtractionModal] = useState(false);
+  const [extractedData, setExtractedData] = useState<{
+    employerName: string;
+    employerRef: string;
+    grossPay: number;
+    taxDeducted: number;
+  } | null>(null);
+
+  // Send message to Fastify BFF Orchestrator
+  const handleSendMessage = async (textToSend?: string) => {
+    const text = textToSend || inputText;
+    if (!text.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      sender: 'user',
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    if (!textToSend) setInputText('');
+    setIsTyping(true);
+
+    try {
+      const response = await fetch('http://127.0.0.1:3001/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          returnObj,
+          taxYear: returnObj.taxYear,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Chat service unavailable');
+
+      const data = await response.json();
+      setIsTyping(false);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: 'bot',
+          text: data.reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+
+      if (data.calculation) {
+        useReturnStore.setState({ computation: data.calculation });
+      }
+
+      // Advance phase heuristic based on keywords
+      if (data.reply && currentPhase < PHASES.length - 1) {
+        const lower = data.reply.toLowerCase();
+        if (currentPhase === 0 && (lower.includes('residence') || lower.includes('days in the uk'))) {
+          setCurrentPhase(1);
+        } else if (currentPhase === 1 && (lower.includes('income') || lower.includes('employment') || lower.includes('p60'))) {
+          setCurrentPhase(2);
+        } else if (currentPhase === 2 && (lower.includes('relief') || lower.includes('credit') || lower.includes('ftcr'))) {
+          setCurrentPhase(3);
+        }
+      }
+    } catch {
+      setIsTyping(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: 'bot',
+          text: 'I\'m unable to reach the orchestrator server right now. Your local calculations are still running — please check the computation panel.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    }
+  };
+
+  // File Upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        sender: 'user',
+        text: `📎 Uploaded: ${file.name}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
+    setIsTyping(true);
+
+    setTimeout(() => {
+      setIsTyping(false);
+      setExtractedData({
+        employerName: 'Acme UK Ltd',
+        employerRef: '120/A4590',
+        grossPay: 85000,
+        taxDeducted: 20123.45,
+      });
+      setShowExtractionModal(true);
+    }, 1200);
+  };
+
+  const confirmExtraction = () => {
+    if (!extractedData) return;
+    const newEmpIndex = returnObj.sa102.length;
+    updateField(`sa102[${newEmpIndex}]`, {
+      employerName: extractedData.employerName,
+      employerRef: extractedData.employerRef,
+      grossPay: extractedData.grossPay * 100,
+      taxDeducted: Math.round(extractedData.taxDeducted * 100),
+      benefits: { companyCars: 0, medicalInsurance: 0, otherBenefits: 0 },
+      expenses: { businessTravel: 0, professionalFees: 0, otherExpenses: 0 },
+    });
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        sender: 'bot',
+        text: `✅ P60 data confirmed for **${extractedData.employerName}**\n\n• Gross Pay: £${extractedData.grossPay.toLocaleString()}\n• Tax Deducted: £${extractedData.taxDeducted.toLocaleString()}\n\nAdded to your SA102 employment schedule. The computation panel has been updated.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
+
+    setShowExtractionModal(false);
+    setExtractedData(null);
+  };
+
+  const formatCurrency = (pence: number | undefined) => {
+    if (pence === undefined || pence === null) return '£0.00';
+    return (pence / 100).toLocaleString('en-GB', { style: 'currency', currency: 'GBP' });
+  };
+
+  const toggleExpand = (key: string) => {
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const currentChips = PHASE_CHIPS[PHASES[currentPhase]?.key] || [];
+
+  return (
+    <div className="app-shell">
+      {/* ── Sidebar ── */}
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <div className="sidebar-logo">SA</div>
+          <div className="sidebar-brand">
+            <span className="sidebar-brand-name">TaxAssist AI</span>
+            <span className="sidebar-brand-sub">Self Assessment 2025-26</span>
+          </div>
+        </div>
+
+        <button className="new-return-btn" onClick={() => createSession()}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          <span>New Return</span>
+        </button>
+
+        <div className="session-list">
+          <div className="session-list-title">Recent Sessions</div>
+          {sessions.map((s: Session) => (
+            <div
+              key={s.id}
+              className={`session-item ${s.id === activeSessionId ? 'active' : ''}`}
+              onClick={() => setActiveSession(s.id)}
+            >
+              <span className="session-item-title">{s.clientName || 'New Return'}</span>
+              <span className="session-item-meta">
+                <span className={`session-status-dot ${s.status}`}></span>
+                {s.taxYear} · {s.status}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="sidebar-footer">
+          <div className="user-avatar">AG</div>
+          <div className="user-info">
+            <span className="user-name">Agent</span>
+            <span className="user-role">Authorised filing agent</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main Content ── */}
+      <div className="main-content">
+        {/* Computation Pane */}
+        <div className="computation-pane">
+          <div className="pane-header">
+            <h1 className="pane-title">Tax Computation</h1>
+            {loading ? (
+              <span className="badge badge-info"><span className="badge-dot"></span>Calculating…</span>
+            ) : error ? (
+              <span className="badge badge-error">Error</span>
+            ) : (
+              <span className="badge badge-success"><span className="badge-dot"></span>HMRC v1.0</span>
+            )}
+          </div>
+
+          <div className="pane-body">
+            {computation ? (
+              <>
+                {/* Income & Allowances */}
+                <div className="calc-card" style={{ animationDelay: '0ms' }}>
+                  <h3>
+                    <svg className="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                    Income & Allowances
+                  </h3>
+                  <div
+                    className={`calc-row calc-expandable ${expandedCards.has('income') ? 'expanded' : ''}`}
+                    onClick={() => toggleExpand('income')}
+                  >
+                    <span className="calc-label">Employment Income (Gross)</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="calc-value">
+                        {formatCurrency(returnObj.sa102.reduce((acc, curr) => acc + curr.grossPay, 0))}
+                      </span>
+                      <svg className="calc-expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className={`calc-detail ${expandedCards.has('income') ? 'open' : ''}`}>
+                    {returnObj.sa102.length === 0 ? (
+                      <div className="calc-row">
+                        <span className="calc-label" style={{ fontStyle: 'italic' }}>No employments added yet</span>
+                      </div>
+                    ) : (
+                      returnObj.sa102.map((emp, i) => (
+                        <div key={i} className="calc-row">
+                          <span className="calc-label">{emp.employerName}</span>
+                          <span className="calc-value">{formatCurrency(emp.grossPay)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="calc-row">
+                    <span className="calc-label">Personal Allowance</span>
+                    <span className="calc-value" style={{ color: 'var(--color-success)' }}>
+                      −{formatCurrency(computation.incomeTax.personalAllowance)}
+                    </span>
+                  </div>
+
+                  {computation.figRegimeElected && (
+                    <div className="fig-indicator">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Foreign Income & Gains (FIG) Regime Elected
+                    </div>
+                  )}
+                </div>
+
+                {/* Tax Band Allocations */}
+                <div className="calc-card" style={{ animationDelay: '60ms' }}>
+                  <h3>
+                    <svg className="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" />
+                    </svg>
+                    Tax Band Allocations
+                  </h3>
+                  {computation.incomeTax.allocatedBands.length === 0 ? (
+                    <div className="empty-state" style={{ padding: '16px' }}>
+                      <span className="empty-state-text" style={{ fontSize: '13px' }}>No taxable income to allocate.</span>
+                    </div>
+                  ) : (
+                    computation.incomeTax.allocatedBands.map((band: any, i: number) => (
+                      <div key={i} className="calc-row">
+                        <span className="calc-label" style={{ textTransform: 'capitalize' }}>
+                          {band.category} · {band.name} @ {band.rate * 100}%
+                        </span>
+                        <span className="calc-value">{formatCurrency(band.taxCharged)}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Reliefs & Charges */}
+                {(computation.ftcr || computation.charges.hicbcAmount > 0) && (
+                  <div className="calc-card" style={{ animationDelay: '120ms' }}>
+                    <h3>
+                      <svg className="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" />
+                      </svg>
+                      Reliefs & Charges
+                    </h3>
+                    {computation.ftcr && (
+                      <div className="calc-row">
+                        <span className="calc-label">Foreign Tax Credit Relief</span>
+                        <span className="calc-value" style={{ color: 'var(--color-success)' }}>
+                          −{formatCurrency(computation.ftcr.totalAllowedCredit)}
+                        </span>
+                      </div>
+                    )}
+                    {computation.charges.hicbcAmount > 0 && (
+                      <div className="calc-row">
+                        <span className="calc-label">Child Benefit Charge (HICBC)</span>
+                        <span className="calc-value" style={{ color: 'var(--color-warning)' }}>
+                          +{formatCurrency(computation.charges.hicbcAmount)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Totals */}
+                <div className="calc-card accent-left" style={{ animationDelay: '180ms' }}>
+                  <h3>
+                    <svg className="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                    </svg>
+                    Summary
+                  </h3>
+                  <div className="calc-row">
+                    <span className="calc-label">Total Tax Liability</span>
+                    <span className="calc-value" style={{ fontWeight: 700 }}>
+                      {formatCurrency(
+                        computation.incomeTax.incomeTaxTotal +
+                        computation.charges.hicbcAmount -
+                        (computation.ftcr?.totalAllowedCredit || 0)
+                      )}
+                    </span>
+                  </div>
+                  <div className="calc-row">
+                    <span className="calc-label">Tax Paid at Source (PAYE)</span>
+                    <span className="calc-value" style={{ color: 'var(--color-success)' }}>
+                      −{formatCurrency(computation.taxAlreadyPaidTotal)}
+                    </span>
+                  </div>
+                  <div
+                    className="calc-row"
+                    style={{
+                      marginTop: '12px',
+                      borderTop: '1px solid rgba(255,255,255,0.06)',
+                      paddingTop: '12px',
+                    }}
+                  >
+                    <span className="calc-label" style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>
+                      Balancing Payment
+                    </span>
+                    <span className="calc-total">{formatCurrency(computation.balancingPayment)}</span>
+                  </div>
+                  {computation.paymentsOnAccountRequired && (
+                    <div className="calc-row" style={{ paddingTop: '8px' }}>
+                      <span className="calc-label" style={{ fontSize: '12px' }}>
+                        Next year Payment on Account
+                      </span>
+                      <span className="calc-value" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {formatCurrency(computation.nextYearPaymentOnAccount)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                  </svg>
+                </div>
+                <span className="empty-state-text">
+                  Begin a conversation to populate your tax computation. Add employment income or upload a P60 to get started.
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Resize Handle */}
+        <div className="resize-handle" />
+
+        {/* Chat / Forms Pane */}
+        <div className="chat-pane">
+          {/* Phase Progress */}
+          <div className="phase-bar">
+            {PHASES.map((phase, i) => (
+              <React.Fragment key={phase.key}>
+                <div className={`phase-step ${i < currentPhase ? 'completed' : ''} ${i === currentPhase ? 'active' : ''}`}>
+                  <span className="phase-step-number">
+                    {i < currentPhase ? '✓' : i + 1}
+                  </span>
+                  <span>{phase.label}</span>
+                </div>
+                {i < PHASES.length - 1 && (
+                  <div className={`phase-connector ${i < currentPhase ? 'completed' : ''}`} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="tab-nav">
+            <button className={`tab-btn ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
+              💬 AI Chat
+            </button>
+            <button className={`tab-btn ${activeTab === 'SA100' ? 'active' : ''}`} onClick={() => setActiveTab('SA100')}>
+              SA100
+            </button>
+            <button className={`tab-btn ${activeTab === 'SA102' ? 'active' : ''}`} onClick={() => setActiveTab('SA102')}>
+              SA102
+            </button>
+            <button className={`tab-btn ${activeTab === 'SA106' ? 'active' : ''}`} onClick={() => setActiveTab('SA106')}>
+              SA106
+            </button>
+            <button className={`tab-btn ${activeTab === 'SA109' ? 'active' : ''}`} onClick={() => setActiveTab('SA109')}>
+              SA109
+            </button>
+          </div>
+
+          {activeTab === 'chat' ? (
+            <div className="chat-container">
+              <div className="chat-history">
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`message-bubble ${msg.sender === 'user' ? 'message-user' : 'message-bot'}`}>
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
+                    <div className="message-timestamp">{msg.timestamp}</div>
+                  </div>
+                ))}
+                {isTyping && (
+                  <div className="typing-indicator">
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Quick Reply Chips */}
+              {currentChips.length > 0 && (
+                <div className="quick-replies">
+                  {currentChips.map((chip) => (
+                    <button key={chip.label} className="chip" onClick={() => handleSendMessage(chip.message)}>
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Input Area */}
+              <div className="chat-input-area">
+                <div className="input-wrapper">
+                  <label className="upload-btn" htmlFor="p60-file">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                  </label>
+                  <input
+                    id="p60-file"
+                    type="file"
+                    style={{ display: 'none' }}
+                    accept=".pdf,.png,.jpg"
+                    onChange={handleFileUpload}
+                  />
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="Ask about your tax return, or upload a P60…"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  />
+                  <button
+                    className="send-btn"
+                    onClick={() => handleSendMessage()}
+                    disabled={!inputText.trim() && !isTyping}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                    Send
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              <FormRenderer activeSection={activeTab} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* OCR Extraction Modal */}
+      {showExtractionModal && extractedData && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>P60 Data Extracted</h2>
+            <p>
+              Please verify the following employer details before adding them to your SA102 employment schedule:
+            </p>
+            <div className="extracted-fields">
+              <div className="calc-row">
+                <span className="calc-label">Employer Name</span>
+                <span className="calc-value">{extractedData.employerName}</span>
+              </div>
+              <div className="calc-row">
+                <span className="calc-label">PAYE Reference</span>
+                <span className="calc-value">{extractedData.employerRef}</span>
+              </div>
+              <div className="calc-row">
+                <span className="calc-label">Gross Taxable Pay</span>
+                <span className="calc-value">£{extractedData.grossPay.toLocaleString()}</span>
+              </div>
+              <div className="calc-row">
+                <span className="calc-label">Income Tax Deducted</span>
+                <span className="calc-value">£{extractedData.taxDeducted.toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="action-btn secondary" onClick={() => setShowExtractionModal(false)}>
+                Cancel
+              </button>
+              <button className="action-btn" onClick={confirmExtraction}>
+                Confirm & Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
