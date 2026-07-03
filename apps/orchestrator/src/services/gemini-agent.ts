@@ -109,7 +109,7 @@ export class GeminiAgent {
     if (this.vertexAI) {
       try {
         const model = this.vertexAI.getGenerativeModel({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-2.5-flash',
           generationConfig: {
             maxOutputTokens: 1200,
             temperature: 0.15,
@@ -267,7 +267,7 @@ export class GeminiAgent {
     ];
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
