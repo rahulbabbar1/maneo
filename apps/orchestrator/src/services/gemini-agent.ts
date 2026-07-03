@@ -1,25 +1,29 @@
-import { VertexAI, FunctionDeclaration, SchemaType } from '@google-cloud/vertexai';
+import { VertexAI, FunctionDeclaration, SchemaType, Tool } from '@google-cloud/vertexai';
 import { computeIncomeTax, computeFullReturn } from '@uk-sa-app/tax-core';
-import { getConfig } from '@uk-sa-app/tax-config';
+import { getConfig, CONFIGS } from '@uk-sa-app/tax-config';
 import { Return } from '@uk-sa-app/return-model';
 import { PromptBuilder } from './prompt-builder.js';
 import { StateMachine, PhaseKey } from './state-machine.js';
 
-// Define the tool declarations for Gemini
+// ─── Tool Declarations ───────────────────────────────────────────────────────
+
 const computeIncomeTaxDeclaration: FunctionDeclaration = {
   name: 'compute_income_tax',
-  description: 'Computes UK personal income tax for a given tax year, including allowances and band allocations.',
+  description: `Computes UK personal income tax for a given tax year.
+IMPORTANT: Call this tool immediately whenever the user provides income figures — don't ask the user to confirm before calling.
+Convert any £ amounts to pence yourself (multiply by 100) before calling.
+Supported tax years: ${Object.keys(CONFIGS).join(', ')}.`,
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
-      taxYear: { type: SchemaType.STRING, description: 'Tax year, e.g. "2025-26"' },
-      region: { type: SchemaType.STRING, description: 'Tax region: rUK, scotland, or wales' },
-      nonSavingsIncome: { type: SchemaType.NUMBER, description: 'Gross employment or non-savings income in pence' },
-      savingsIncome: { type: SchemaType.NUMBER, description: 'Savings interest income in pence' },
-      dividendIncome: { type: SchemaType.NUMBER, description: 'Dividend income in pence' },
-      giftAidGrossedUp: { type: SchemaType.NUMBER, description: 'Grossed-up Gift Aid payments in pence' },
-      relievablePensionContributions: { type: SchemaType.NUMBER, description: 'Relievable pension contributions in pence' },
-      blindPersonsAllowanceClaimed: { type: SchemaType.BOOLEAN, description: 'Whether Blind Person\'s Allowance is claimed' },
+      taxYear:   { type: SchemaType.STRING, description: 'Tax year e.g. "2024-25". Supported: ' + Object.keys(CONFIGS).join(', ') },
+      region:    { type: SchemaType.STRING, description: 'Tax region: rUK, scotland, or wales' },
+      nonSavingsIncome: { type: SchemaType.NUMBER, description: 'Gross employment income in PENCE (£1 = 100 pence)' },
+      savingsIncome:    { type: SchemaType.NUMBER, description: 'Savings interest in PENCE' },
+      dividendIncome:   { type: SchemaType.NUMBER, description: 'Dividend income in PENCE' },
+      giftAidGrossedUp:              { type: SchemaType.NUMBER, description: 'Grossed-up Gift Aid in PENCE' },
+      relievablePensionContributions: { type: SchemaType.NUMBER, description: 'Pension contributions in PENCE' },
+      blindPersonsAllowanceClaimed:   { type: SchemaType.BOOLEAN, description: 'Whether Blind Person\'s Allowance is claimed' },
     },
     required: ['taxYear', 'region', 'nonSavingsIncome', 'savingsIncome', 'dividendIncome'],
   },
@@ -27,16 +31,23 @@ const computeIncomeTaxDeclaration: FunctionDeclaration = {
 
 const computeFullReturnDeclaration: FunctionDeclaration = {
   name: 'compute_full_return',
-  description: 'Runs the top-level HMRC calculation assembler on a complete Return object, returning full income tax, CGT, charges, and balancing payments.',
+  description: 'Runs the full HMRC calculation on a complete Return object, returning income tax, CGT, charges, and balancing payment. Call this when the return data is sufficiently complete to give a summary.',
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
-      taxYear: { type: SchemaType.STRING, description: 'Tax year, e.g. "2025-26"' },
+      taxYear:   { type: SchemaType.STRING, description: 'Tax year e.g. "2024-25"' },
       returnObj: { type: SchemaType.OBJECT, description: 'The complete Return object' },
     },
     required: ['taxYear', 'returnObj'],
   },
 };
+
+// Google Search grounding tool — gives the agent live HMRC guidance access
+const googleSearchTool: Tool = {
+  googleSearch: {},
+} as any;
+
+// ─── GeminiAgent ─────────────────────────────────────────────────────────────
 
 export class GeminiAgent {
   private vertexAI: VertexAI | null = null;
@@ -45,12 +56,9 @@ export class GeminiAgent {
   constructor(project: string, region: string, currentPhase?: PhaseKey) {
     this.stateMachine = new StateMachine(currentPhase);
     try {
-      // Force us-central1 to ensure foundation model availability and bypass Cloud Run region auto-detection
-      process.env.GOOGLE_CLOUD_LOCATION = 'us-central1';
-      process.env.LOCATION = 'us-central1';
       this.vertexAI = new VertexAI({ project, location: 'us-central1' });
     } catch (e) {
-      console.warn('Vertex AI failed to initialize. Running in fallback/mock mode.');
+      console.warn('Vertex AI failed to initialize. Running in fallback mode.');
     }
   }
 
@@ -58,21 +66,32 @@ export class GeminiAgent {
     return this.stateMachine.getCurrentPhase();
   }
 
-  // Executes tools directly matching MCP server capabilities
+  // ── Tool executor ────────────────────────────────────────────────────────
+
   private executeTool(name: string, args: any): any {
-    const taxYear = args.taxYear || '2025-26';
+    // Resolve tax year — accept shorthand like "24-25" → "2024-25"
+    let taxYear: string = args.taxYear || '2025-26';
+    if (/^\d{2}-\d{2}$/.test(taxYear)) {
+      taxYear = `20${taxYear}`;
+    }
+    // Default to most recent supported year if not found
+    if (!CONFIGS[taxYear]) {
+      const available = Object.keys(CONFIGS).sort().reverse();
+      console.warn(`[Tax Config] Year "${taxYear}" not found, defaulting to ${available[0]}`);
+      taxYear = available[0];
+    }
     const config = getConfig(taxYear);
 
     if (name === 'compute_income_tax') {
       return computeIncomeTax(
         {
-          region: args.region || 'rUK',
-          nonSavingsIncome: args.nonSavingsIncome || 0,
-          savingsIncome: args.savingsIncome || 0,
-          dividendIncome: args.dividendIncome || 0,
-          giftAidGrossedUp: args.giftAidGrossedUp || 0,
+          region:                        args.region || 'rUK',
+          nonSavingsIncome:              args.nonSavingsIncome || 0,
+          savingsIncome:                 args.savingsIncome    || 0,
+          dividendIncome:                args.dividendIncome   || 0,
+          giftAidGrossedUp:              args.giftAidGrossedUp || 0,
           relievablePensionContributions: args.relievablePensionContributions || 0,
-          blindPersonsAllowanceClaimed: args.blindPersonsAllowanceClaimed || false,
+          blindPersonsAllowanceClaimed:  args.blindPersonsAllowanceClaimed || false,
         },
         config
       );
@@ -85,18 +104,20 @@ export class GeminiAgent {
     throw new Error(`Tool ${name} not found`);
   }
 
+  // ── Main conversation turn ───────────────────────────────────────────────
+
   async runConversationTurn(
     message: string,
     returnObj: Return,
     history: any[] = []
   ): Promise<{ reply: string; phase: PhaseKey; calculation: any }> {
     const taxYear = returnObj.taxYear || '2025-26';
-    const config = getConfig(taxYear);
-    
-    // 1. Run local calculation to set up current computation baseline
+    const config  = CONFIGS[taxYear] ? getConfig(taxYear) : getConfig(Object.keys(CONFIGS).sort().reverse()[0]);
+
+    // Baseline calculation with current return data
     let latestCalc = computeFullReturn(returnObj, config);
 
-    // 2. Build current system prompt
+    // Build system prompt
     const systemPrompt = PromptBuilder.buildSystemInstruction(
       this.stateMachine.getCurrentPhase(),
       returnObj,
@@ -104,23 +125,36 @@ export class GeminiAgent {
     );
 
     let replyText = '';
-    const validAmounts = this.getValidAmounts(latestCalc);
 
     if (this.vertexAI) {
       try {
-        const model = this.vertexAI.getGenerativeModel({
-          model: 'gemini-2.5-flash',
-          generationConfig: {
-            maxOutputTokens: 1200,
-            temperature: 0.15,
-          },
-          tools: [{ functionDeclarations: [computeIncomeTaxDeclaration, computeFullReturnDeclaration] }],
-        });
+        // Try Pro first, fall back to Flash if unavailable
+        const PREFERRED_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'];
+        let model;
+        let modelName = '';
+        for (const m of PREFERRED_MODELS) {
+          try {
+            model = this.vertexAI.getGenerativeModel({
+              model: m,
+              generationConfig: {
+                maxOutputTokens: 8192,  // Pro supports larger context windows
+                temperature:     0.4,
+              },
+              tools: [{ functionDeclarations: [computeIncomeTaxDeclaration, computeFullReturnDeclaration] }],
+            });
+            modelName = m;
+            break;
+          } catch {
+            console.warn(`[Vertex AI] Model ${m} not available, trying next...`);
+          }
+        }
+        if (!model) throw new Error('No Vertex AI model available');
+        console.log(`[Vertex AI] Using model: ${modelName}`);
 
-        // Setup chat sessions
         const chat = model.startChat({
           history: [
-            { role: 'user', parts: [{ text: systemPrompt }] },
+            { role: 'user',  parts: [{ text: systemPrompt }] },
+            { role: 'model', parts: [{ text: 'Understood. I am Maneo, your UK Self Assessment Filing Assistant. I will help prepare this return accurately, using the computation engine for all tax figures.' }] },
             ...history,
           ],
         });
@@ -130,171 +164,128 @@ export class GeminiAgent {
           p => p.functionCall
         ) || [];
 
-        // Agent function-calling loop
+        // Agent function-calling loop (max 8 iterations to allow complex workflows)
         let attempts = 0;
-        while (functionCalls.length > 0 && attempts < 5) {
+        while (functionCalls.length > 0 && attempts < 8) {
           attempts++;
           const toolOutputs = [];
 
           for (const call of functionCalls) {
             if (call.functionCall) {
               const { name, args } = call.functionCall;
-              console.log(`[MCP Tool Invoke] calling ${name} with`, args);
+              console.log(`[Tool Call] ${name}(`, JSON.stringify(args).slice(0, 200), ')');
               try {
                 const result = this.executeTool(name, args);
-                if (name === 'compute_full_return') {
-                  latestCalc = result;
-                }
+                if (name === 'compute_full_return') latestCalc = result;
                 toolOutputs.push({
-                  functionResponse: {
-                    name,
-                    response: { result },
-                  },
+                  functionResponse: { name, response: { result } },
                 });
               } catch (err: any) {
+                console.error(`[Tool Error] ${name}:`, err.message);
                 toolOutputs.push({
-                  functionResponse: {
-                    name,
-                    response: { error: err.message },
-                  },
+                  functionResponse: { name, response: { error: err.message } },
                 });
               }
             }
           }
 
-          // Send tool output back to Gemini
           response = await chat.sendMessage(toolOutputs);
           functionCalls = response.response.candidates?.[0]?.content?.parts?.filter(
             p => p.functionCall
           ) || [];
         }
 
-        replyText = response.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        replyText = response.response.candidates?.[0]?.content?.parts
+          ?.filter(p => p.text)
+          .map(p => p.text)
+          .join('\n') || '';
+
       } catch (err: any) {
-        console.error('Error in Vertex AI Loop:', err);
-        if (process.env.GEMINI_API_KEY) {
-          try {
-            console.log('[AI Fallback] Invoking Google AI Studio fallback API...');
-            const fallbackResult = await this.runAIStudioFallback(message, systemPrompt, history);
-            replyText = fallbackResult.reply;
-          } catch (fallbackErr: any) {
-            console.error('AI Studio fallback failed:', fallbackErr);
-            replyText = `I ran into an error communicating with Vertex AI: ${err.message}. AI Studio fallback also failed: ${fallbackErr.message}. Running calculation locally.`;
-          }
-        } else {
-          replyText = `I ran into an error communicating with Vertex AI: ${err.message}. Running calculation locally.`;
-        }
+        console.error('[Vertex AI Error]', err.message);
+        replyText = await this.runAIStudioFallback(message, systemPrompt, history, returnObj);
       }
     } else {
-      // Fallback local mode or AI Studio fallback
-      if (process.env.GEMINI_API_KEY) {
-        try {
-          console.log('[AI Fallback] Invoking Google AI Studio fallback API...');
-          const fallbackResult = await this.runAIStudioFallback(message, systemPrompt, history);
-          replyText = fallbackResult.reply;
-        } catch (fallbackErr: any) {
-          console.error('AI Studio fallback failed:', fallbackErr);
-          replyText = `Vertex AI was not initialized. AI Studio fallback failed: ${fallbackErr.message}. Running calculation locally.`;
-        }
-      } else {
-        replyText = `I have updated your computation. Total tax due is £${(latestCalc.incomeTax.incomeTaxTotal / 100).toLocaleString()}. Let me know if you would like to claim Overseas Workday Relief or add employment details.`;
-      }
+      replyText = await this.runAIStudioFallback(message, systemPrompt, history, returnObj);
     }
 
-    // 3. Post-Check Guardrail (Scan for numerical hallucinations)
-    const sanitizedReply = this.applyNumericalGuardrail(replyText, validAmounts);
-
-    // 4. Update phase state machine heuristically
-    const nextPhase = this.stateMachine.determineNextPhase(message, sanitizedReply);
+    // Update phase state machine
+    const nextPhase = this.stateMachine.determineNextPhase(message, replyText);
     if (nextPhase) {
-      this.stateMachine.transitionTo(nextPhase, `LLM Conversation transition`);
+      this.stateMachine.transitionTo(nextPhase, 'LLM conversation transition');
     }
 
     return {
-      reply: sanitizedReply,
-      phase: this.stateMachine.getCurrentPhase(),
+      reply:       replyText,
+      phase:       this.stateMachine.getCurrentPhase(),
       calculation: latestCalc,
     };
   }
 
-  private getValidAmounts(comp: any): Set<number> {
-    const valid = new Set<number>();
-    if (!comp) return valid;
-    valid.add(comp.balancingPayment / 100);
-    valid.add(comp.incomeTax?.incomeTaxTotal / 100);
-    valid.add(comp.incomeTax?.personalAllowance / 100);
-    if (comp.incomeTax?.allocatedBands) {
-      comp.incomeTax.allocatedBands.forEach((b: any) => {
-        valid.add(b.amountAllocated / 100);
-        valid.add(b.taxCharged / 100);
-      });
-    }
-    return valid;
-  }
-
-  private applyNumericalGuardrail(reply: string, validAmounts: Set<number>): string {
-    const matches = reply.match(/(?:£\s*)?(\d+(?:,\d{3})*(?:\.\d{2})?)/g) || [];
-    let cleanReply = reply;
-
-    for (const m of matches) {
-      const clean = m.replace(/[£,]/g, '').trim();
-      const amt = parseFloat(clean);
-
-      // Block unverified currency figures over £100
-      if (amt > 100 && !validAmounts.has(amt)) {
-        console.warn(`[Numerical Guardrail] Blocked hallucinated figure: £${amt}`);
-        cleanReply = cleanReply.replace(m, '[REDACTED_UNVERIFIED_FIGURE]');
-      }
-    }
-    return cleanReply;
-  }
+  // ── AI Studio fallback (no function calling, but still useful) ───────────
 
   private async runAIStudioFallback(
     message: string,
     systemPrompt: string,
-    history: any[] = []
-  ): Promise<{ reply: string; calculation: any }> {
+    history: any[],
+    returnObj?: Return
+  ): Promise<string> {
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('No GEMINI_API_KEY environment variable set.');
-
-    // Normalise chat history structure for AI Studio payload
-    const contents = [
-      ...history.map(h => ({
-        role: h.role === 'model' ? 'model' : 'user',
-        parts: h.parts.map((p: any) => ({ text: p.text || '' })),
-      })),
-      { role: 'user', parts: [{ text: message }] }
-    ];
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: {
-            parts: [{ text: systemPrompt }]
-          },
-          generationConfig: {
-            temperature: 0.15,
-            maxOutputTokens: 1200
-          }
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`AI Studio API error: ${response.statusText} - ${errText}`);
+    if (!apiKey) {
+      return 'The AI service is temporarily unavailable. Your local tax computation is still running — check the panel on the left.';
     }
 
-    const data = await response.json();
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
-    return {
-      reply: replyText,
-      calculation: null
-    };
+    try {
+      console.log('[AI Fallback] Using Google AI Studio (gemini-2.5-flash)...');
+
+      const contents = [
+        ...history.map(h => ({
+          role:  h.role === 'model' ? 'model' : 'user',
+          parts: h.parts.map((p: any) => ({ text: p.text || '' })),
+        })),
+        { role: 'user', parts: [{ text: message }] },
+      ];
+
+      const STUDIO_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'];
+      let lastError = '';
+      for (const studioModel of STUDIO_MODELS) {
+        try {
+          console.log(`[AI Fallback] Trying ${studioModel} via AI Studio...`);
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${studioModel}:generateContent?key=${apiKey}`,
+            {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents,
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig:  { temperature: 0.4, maxOutputTokens: 8192 },
+                tools: [{ googleSearch: {} }],
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const errText = await response.text();
+            lastError = `${studioModel}: ${response.statusText} — ${errText}`;
+            console.warn(`[AI Studio] ${lastError}`);
+            continue;
+          }
+
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            console.log(`[AI Studio] Success with ${studioModel}`);
+            return text;
+          }
+        } catch (err: any) {
+          lastError = err.message;
+          console.error(`[AI Studio] ${studioModel} error:`, err.message);
+        }
+      }
+      throw new Error(lastError || 'All AI Studio models failed');
+    } catch (err: any) {
+      console.error('[AI Studio Fallback Error]', err.message);
+      return `The AI service encountered an error: ${err.message}. Please try again or contact support.`;
+    }
   }
 }

@@ -162,8 +162,203 @@ export const CONFIG_2025_26: TaxYearConfig = {
   },
 };
 
+export const CONFIG_2024_25: TaxYearConfig = {
+  taxYear: '2024-25',
+  personalAllowance: 1257000,           // £12,570 — frozen
+  personalAllowanceTaperLimit: 10000000, // £100,000
+  blindPersonsAllowance: 302500,        // £3,025
+  marriageAllowanceTransferLimit: 125700, // £1,257
+
+  dividendAllowance: 50000,             // £500
+
+  savingsStartingRateLimit: 500000,     // £5,000
+  savingsStartingRate: 0.00,
+  personalSavingsAllowanceBasic: 100000,   // £1,000
+  personalSavingsAllowanceHigher: 50000,   // £500
+  personalSavingsAllowanceAdditional: 0,
+
+  incomeTax: {
+    rUK: {
+      nonSavings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      savings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      dividends: [
+        { name: 'basic',      limit: 3770000,  rate: 0.0875 },
+        { name: 'higher',     limit: 12570000, rate: 0.3375 },
+        { name: 'additional', limit: Infinity, rate: 0.3935 },
+      ],
+    },
+    scotland: {
+      nonSavings: [
+        { name: 'starter',      limit: 214000,  rate: 0.19 },
+        { name: 'basic',        limit: 1332100, rate: 0.20 },
+        { name: 'intermediate', limit: 3110000, rate: 0.21 },
+        { name: 'higher',       limit: 6244000, rate: 0.42 },
+        { name: 'advanced',     limit: 12570000, rate: 0.45 },
+        { name: 'top',          limit: Infinity, rate: 0.48 },
+      ],
+      savings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      dividends: [
+        { name: 'basic',      limit: 3770000,  rate: 0.0875 },
+        { name: 'higher',     limit: 12570000, rate: 0.3375 },
+        { name: 'additional', limit: Infinity, rate: 0.3935 },
+      ],
+    },
+    wales: {
+      nonSavings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      savings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      dividends: [
+        { name: 'basic',      limit: 3770000,  rate: 0.0875 },
+        { name: 'higher',     limit: 12570000, rate: 0.3375 },
+        { name: 'additional', limit: Infinity, rate: 0.3935 },
+      ],
+    },
+  },
+
+  capitalGains: {
+    annualExemptAmount: 300000,         // £3,000 (reduced from £6k in 2023-24)
+    basicRate: 0.10,
+    basicRateResidential: 0.18,
+    higherRate: 0.20,
+    higherRateResidential: 0.24,
+    badrRate: 0.10,
+    badrLifetimeLimit: 100000000,       // £1,000,000
+  },
+
+  hicbc: {
+    lowerThreshold: 6000000,            // £60,000
+    upperThreshold: 8000000,            // £80,000
+    divisor: 16000,
+  },
+
+  studentLoans: {
+    plan1: { threshold: 2437500, rate: 0.09 },
+    plan2: { threshold: 2729500, rate: 0.09 },
+    plan4: { threshold: 3188000, rate: 0.09 },
+    plan5: { threshold: 2527500, rate: 0.09 },
+    postgrad: { threshold: 2100000, rate: 0.06 },
+  },
+};
+
+export const CONFIG_2023_24: TaxYearConfig = {
+  taxYear: '2023-24',
+  personalAllowance: 1257000,
+  personalAllowanceTaperLimit: 10000000,
+  blindPersonsAllowance: 295000,
+  marriageAllowanceTransferLimit: 125700,
+
+  dividendAllowance: 100000,            // £1,000 (was £2k before 2023-24)
+
+  savingsStartingRateLimit: 500000,
+  savingsStartingRate: 0.00,
+  personalSavingsAllowanceBasic: 100000,
+  personalSavingsAllowanceHigher: 50000,
+  personalSavingsAllowanceAdditional: 0,
+
+  incomeTax: {
+    rUK: {
+      nonSavings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      savings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      dividends: [
+        { name: 'basic',      limit: 3770000,  rate: 0.0875 },
+        { name: 'higher',     limit: 12570000, rate: 0.3375 },
+        { name: 'additional', limit: Infinity, rate: 0.3935 },
+      ],
+    },
+    scotland: {
+      nonSavings: [
+        { name: 'starter',      limit: 214000,  rate: 0.19 },
+        { name: 'basic',        limit: 1332100, rate: 0.20 },
+        { name: 'intermediate', limit: 3110000, rate: 0.21 },
+        { name: 'higher',       limit: 6244000, rate: 0.42 },
+        { name: 'top',          limit: Infinity, rate: 0.47 },
+      ],
+      savings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      dividends: [
+        { name: 'basic',      limit: 3770000,  rate: 0.0875 },
+        { name: 'higher',     limit: 12570000, rate: 0.3375 },
+        { name: 'additional', limit: Infinity, rate: 0.3935 },
+      ],
+    },
+    wales: {
+      nonSavings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      savings: [
+        { name: 'basic',      limit: 3770000,  rate: 0.20 },
+        { name: 'higher',     limit: 12570000, rate: 0.40 },
+        { name: 'additional', limit: Infinity, rate: 0.45 },
+      ],
+      dividends: [
+        { name: 'basic',      limit: 3770000,  rate: 0.0875 },
+        { name: 'higher',     limit: 12570000, rate: 0.3375 },
+        { name: 'additional', limit: Infinity, rate: 0.3935 },
+      ],
+    },
+  },
+
+  capitalGains: {
+    annualExemptAmount: 600000,         // £6,000
+    basicRate: 0.10,
+    basicRateResidential: 0.18,
+    higherRate: 0.20,
+    higherRateResidential: 0.28,
+    badrRate: 0.10,
+    badrLifetimeLimit: 100000000,
+  },
+
+  hicbc: {
+    lowerThreshold: 5000000,            // £50,000 (old threshold before 2024-25 change)
+    upperThreshold: 6000000,            // £60,000
+    divisor: 10000,
+  },
+
+  studentLoans: {
+    plan1: { threshold: 2275000, rate: 0.09 },
+    plan2: { threshold: 2729500, rate: 0.09 },
+    plan4: { threshold: 2775000, rate: 0.09 },
+    plan5: { threshold: 2527500, rate: 0.09 },
+    postgrad: { threshold: 2100000, rate: 0.06 },
+  },
+};
+
 export const CONFIGS: Record<string, TaxYearConfig> = {
   '2025-26': CONFIG_2025_26,
+  '2024-25': CONFIG_2024_25,
+  '2023-24': CONFIG_2023_24,
 };
 
 export function getConfig(taxYear: string): TaxYearConfig {
