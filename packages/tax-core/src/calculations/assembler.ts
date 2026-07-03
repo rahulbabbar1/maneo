@@ -33,15 +33,19 @@ export function computeFullReturn(
   returnObj: Return,
   config: TaxYearConfig
 ): FullReturnComputation {
+  const sa100 = returnObj.sa100 || {};
+  const reliefs = sa100.reliefs || {};
+  const taxPaid = sa100.taxAlreadyPaid || {};
+
   // --- 1. Residence Evaluation ---
   let isResident = true;
   let figElected = false;
 
-  if (returnObj.sa109) {
+  if (returnObj.sa109 && returnObj.sa109.residenceStatus) {
     const srtInput = {
-      daysInUk: returnObj.sa109.residenceStatus.daysInUk,
+      daysInUk: returnObj.sa109.residenceStatus.daysInUk || 0,
       wasResidentInPrevious3Years: returnObj.sa109.residenceStatus.srtResult !== 'non_resident',
-      nonResidentPrevious10Years: returnObj.sa109.residenceStatus.figRegimeElected, // assumption
+      nonResidentPrevious10Years: returnObj.sa109.residenceStatus.figRegimeElected || false, // assumption
       hadUkHome: false,
       workedFullTimeInUk: false,
       workedFullTimeOverseas: false,
@@ -63,10 +67,13 @@ export function computeFullReturn(
   let payeTaxDeducted = 0;
 
   // SA102 Employments
-  for (const emp of returnObj.sa102) {
-    grossEmployment += emp.grossPay + emp.benefits.companyCars + emp.benefits.medicalInsurance + emp.benefits.otherBenefits;
-    grossEmployment -= emp.expenses.businessTravel + emp.expenses.professionalFees + emp.expenses.otherExpenses;
-    payeTaxDeducted += emp.taxDeducted;
+  const sa102List = returnObj.sa102 || [];
+  for (const emp of sa102List) {
+    const benefits = emp.benefits || {};
+    const expenses = emp.expenses || {};
+    grossEmployment += (emp.grossPay || 0) + (benefits.companyCars || 0) + (benefits.medicalInsurance || 0) + (benefits.otherBenefits || 0);
+    grossEmployment -= (expenses.businessTravel || 0) + (expenses.professionalFees || 0) + (expenses.otherExpenses || 0);
+    payeTaxDeducted += emp.taxDeducted || 0;
   }
 
   // SA106 Foreign Income
@@ -74,25 +81,25 @@ export function computeFullReturn(
   let foreignDividends = 0;
   let foreignOther = 0;
 
-  if (returnObj.sa106 && isResident) {
+  if (returnObj.sa106 && Array.isArray(returnObj.sa106.foreignIncome) && isResident) {
     for (const item of returnObj.sa106.foreignIncome) {
       // If FIG is elected, qualifying foreign income is fully excluded from UK tax
       if (figElected) continue;
 
       if (item.incomeType === 'savings') {
-        foreignSavings += item.grossAmount;
+        foreignSavings += item.grossAmount || 0;
       } else if (item.incomeType === 'dividends') {
-        foreignDividends += item.grossAmount;
+        foreignDividends += item.grossAmount || 0;
       } else {
-        foreignOther += item.grossAmount;
+        foreignOther += item.grossAmount || 0;
       }
     }
   }
 
   // Total income categories
   const nonSavingsIncome = grossEmployment + foreignOther;
-  const savingsIncome = returnObj.sa100.taxAlreadyPaid.taxDeductedFromSavings + foreignSavings; // simple aggregation
-  const dividendIncome = returnObj.sa100.taxAlreadyPaid.taxDeductedFromDividends + foreignDividends;
+  const savingsIncome = (taxPaid.taxDeductedFromSavings || 0) + foreignSavings; // simple aggregation
+  const dividendIncome = (taxPaid.taxDeductedFromDividends || 0) + foreignDividends;
 
   // --- 3. Compute Income Tax ---
   const incomeTaxInput = {
@@ -100,31 +107,31 @@ export function computeFullReturn(
     nonSavingsIncome,
     savingsIncome,
     dividendIncome,
-    giftAidGrossedUp: returnObj.sa100.reliefs.giftAidGrossedUp,
-    relievablePensionContributions: returnObj.sa100.reliefs.relievablePensionContributions,
-    blindPersonsAllowanceClaimed: returnObj.sa100.reliefs.blindPersonsAllowance,
+    giftAidGrossedUp: reliefs.giftAidGrossedUp || 0,
+    relievablePensionContributions: reliefs.relievablePensionContributions || 0,
+    blindPersonsAllowanceClaimed: reliefs.blindPersonsAllowance || false,
   };
   const incomeTaxOutput = computeIncomeTax(incomeTaxInput, config);
 
   // --- 4. Compute Capital Gains Tax ---
   // Unused basic rate band = total basic rate band width - basic rate band used in income tax
-  const basicLimit = config.incomeTax.rUK.nonSavings[0].limit + returnObj.sa100.reliefs.giftAidGrossedUp + returnObj.sa100.reliefs.relievablePensionContributions;
+  const basicLimit = config.incomeTax.rUK.nonSavings[0].limit + (reliefs.giftAidGrossedUp || 0) + (reliefs.relievablePensionContributions || 0);
   const allocatedBasicRate = incomeTaxOutput.allocatedBands
     .filter(b => b.name === 'basic')
     .reduce((acc, curr) => acc + curr.amountAllocated, 0);
   const unusedBasicRateBand = Math.max(0, basicLimit - allocatedBasicRate);
 
   let cgtOutput: CgtResult | undefined;
-  if (returnObj.sa108) {
+  if (returnObj.sa108 && Array.isArray(returnObj.sa108.disposals)) {
     const cgtInput = {
       disposals: returnObj.sa108.disposals.map(d => ({
         assetType: d.assetType,
-        proceeds: d.proceeds,
-        costs: d.costs,
-        losses: d.losses,
-        claimBadr: d.claimBadr,
+        proceeds: d.proceeds || 0,
+        costs: d.costs || 0,
+        losses: d.losses || 0,
+        claimBadr: d.claimBadr || false,
       })),
-      broughtForwardLosses: returnObj.sa108.broughtForwardLosses,
+      broughtForwardLosses: returnObj.sa108.broughtForwardLosses || 0,
       unusedBasicRateBand,
     };
     cgtOutput = computeCgt(cgtInput, config);
@@ -132,7 +139,7 @@ export function computeFullReturn(
 
   // --- 5. Compute Foreign Tax Credit Relief (FTCR) ---
   let ftcrOutput: FtcrResult | undefined;
-  if (returnObj.sa106 && isResident && !figElected) {
+  if (returnObj.sa106 && Array.isArray(returnObj.sa106.foreignIncome) && isResident && !figElected) {
     // Determine UK tax generated by each foreign item
     // In actual system, we do a marginal tax comparison.
     // For this implementation, we associate a proportional slice of total tax as a baseline
@@ -142,7 +149,7 @@ export function computeFullReturn(
     returnObj.sa106.foreignIncome.forEach((item, index) => {
       const key = `${item.countryCode}_${item.incomeType}_${index}`;
       if (totalIncome > 0) {
-        const proportion = item.grossAmount / totalIncome;
+        const proportion = (item.grossAmount || 0) / totalIncome;
         ukTaxOnForeignIncome[key] = Math.round(incomeTaxOutput.incomeTaxTotal * proportion);
       } else {
         ukTaxOnForeignIncome[key] = 0;
@@ -156,11 +163,11 @@ export function computeFullReturn(
   }
 
   // --- 6. Compute Additional Charges ---
-  const adjustedNetIncome = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - (returnObj.sa100.reliefs.giftAidGrossedUp + returnObj.sa100.reliefs.relievablePensionContributions));
+  const adjustedNetIncome = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - ((reliefs.giftAidGrossedUp || 0) + (reliefs.relievablePensionContributions || 0)));
   
   // Expose child benefit input from sa101
-  const childBenefit = returnObj.sa101?.highIncomeChildBenefitCharge.benefitAmountReceived || 0;
-  const planType = returnObj.sa101?.studentLoan.planType || 'none';
+  const childBenefit = returnObj.sa101?.highIncomeChildBenefitCharge?.benefitAmountReceived || 0;
+  const planType = returnObj.sa101?.studentLoan?.planType || 'none';
 
   const charges = computeReliefsCharges({
     adjustedNetIncome,
@@ -178,7 +185,7 @@ export function computeFullReturn(
   const totalTaxLiability = netIncomeTax + totalCgt + charges.hicbcAmount + charges.studentLoanBalanceDue;
   
   // Deduct tax already paid
-  const taxAlreadyPaidTotal = payeTaxDeducted + returnObj.sa100.taxAlreadyPaid.cisDeductions + returnObj.sa100.taxAlreadyPaid.otherTaxPaid;
+  const taxAlreadyPaidTotal = payeTaxDeducted + (taxPaid.cisDeductions || 0) + (taxPaid.otherTaxPaid || 0);
   const balancingPayment = totalTaxLiability - taxAlreadyPaidTotal;
 
   // Payments on account are required if:

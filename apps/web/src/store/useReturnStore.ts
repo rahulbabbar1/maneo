@@ -75,6 +75,10 @@ function setNestedValue(obj: any, path: string, value: any): any {
   return newObj;
 }
 
+const API_BASE = import.meta.env.PROD
+  ? 'https://uk-sa-orchestrator-1014225777564.europe-west2.run.app'
+  : 'http://localhost:3001';
+
 export const useReturnStore = create<ReturnStore>((set, get) => ({
   returnObj: initialReturn,
   computation: null,
@@ -96,7 +100,7 @@ export const useReturnStore = create<ReturnStore>((set, get) => ({
   calculateTax: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/calculate', {
+      const response = await fetch(`${API_BASE}/api/calculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

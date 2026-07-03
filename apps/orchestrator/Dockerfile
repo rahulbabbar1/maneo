@@ -7,10 +7,13 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY apps/orchestrator/package*.json ./apps/orchestrator/
+COPY apps/web/package*.json ./apps/web/
+COPY apps/hmrc-integration/package*.json ./apps/hmrc-integration/
 COPY packages/return-model/package*.json ./packages/return-model/
 COPY packages/tax-config/package*.json ./packages/tax-config/
 COPY packages/tax-core/package*.json ./packages/tax-core/
 COPY packages/mcp-servers/package*.json ./packages/mcp-servers/
+COPY packages/hmrc-artefacts/package*.json ./packages/hmrc-artefacts/
 
 # Install dependencies (workspaces will link packages automatically)
 RUN npm ci
@@ -35,9 +38,13 @@ ENV PORT=3001
 
 COPY package*.json ./
 COPY apps/orchestrator/package*.json ./apps/orchestrator/
+COPY apps/web/package*.json ./apps/web/
+COPY apps/hmrc-integration/package*.json ./apps/hmrc-integration/
 COPY packages/return-model/package*.json ./packages/return-model/
 COPY packages/tax-config/package*.json ./packages/tax-config/
 COPY packages/tax-core/package*.json ./packages/tax-core/
+COPY packages/mcp-servers/package*.json ./packages/mcp-servers/
+COPY packages/hmrc-artefacts/package*.json ./packages/hmrc-artefacts/
 
 # Install production-only dependencies
 RUN npm ci --omit=dev

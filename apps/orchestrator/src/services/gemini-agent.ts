@@ -45,7 +45,9 @@ export class GeminiAgent {
   constructor(project: string, region: string, currentPhase?: PhaseKey) {
     this.stateMachine = new StateMachine(currentPhase);
     try {
-      this.vertexAI = new VertexAI({ project, location: region });
+      // Default to us-central1 for Vertex AI models to ensure access to Gemini foundation models
+      const location = region === 'europe-west2' ? 'us-central1' : region;
+      this.vertexAI = new VertexAI({ project, location });
     } catch (e) {
       console.warn('Vertex AI failed to initialize. Running in fallback/mock mode.');
     }

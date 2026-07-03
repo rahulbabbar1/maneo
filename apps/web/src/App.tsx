@@ -4,6 +4,10 @@ import { useChatStore, type Session } from './store/useChatStore.js';
 import { FormRenderer } from './components/form-renderer.js';
 import './App.css';
 
+const API_BASE = import.meta.env.PROD
+  ? 'https://uk-sa-orchestrator-1014225777564.europe-west2.run.app'
+  : 'http://localhost:3001';
+
 interface Message {
   id: string;
   sender: 'user' | 'bot';
@@ -54,6 +58,62 @@ const PHASE_CHIPS: Record<string, { label: string; message: string }[]> = {
 };
 
 export default function App() {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('isAuthenticated') === 'true';
+  });
+  const [username, setUsername] = useState(() => {
+    return localStorage.getItem('username') || '';
+  });
+  const [userRole, setUserRole] = useState(() => {
+    return localStorage.getItem('userRole') || 'Main Agent';
+  });
+
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [loginRole, setLoginRole] = useState<'Main Agent' | 'Supporting Agent'>('Main Agent');
+  const [loginError, setLoginError] = useState('');
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginUser.trim() || !loginPass.trim()) {
+      setLoginError('Please enter both username and password.');
+      return;
+    }
+    // Simple mock credential check
+    if (loginUser.toLowerCase() === 'admin' || loginUser.toLowerCase() === 'rahul') {
+      setIsAuthenticated(true);
+      setUsername(loginUser);
+      setUserRole(loginRole);
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('username', loginUser);
+      localStorage.setItem('userRole', loginRole);
+      setLoginError('');
+    } else {
+      setLoginError('Invalid username or password. Try "admin" or "rahul".');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUsername('');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userRole');
+  };
+
   const [activeTab, setActiveTab] = useState<'chat' | 'SA100' | 'SA102' | 'SA106' | 'SA109'>('chat');
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -109,7 +169,7 @@ export default function App() {
     setIsTyping(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/chat', {
+      const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -236,6 +296,62 @@ export default function App() {
 
   const currentChips = PHASE_CHIPS[PHASES[currentPhase]?.key] || [];
 
+  if (!isAuthenticated) {
+    return (
+      <div className="login-screen">
+        <div className="login-box">
+          <div className="login-logo">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+            <h2>UK Self Assessment</h2>
+            <p>Agent Portal Sandbox</p>
+          </div>
+          <form onSubmit={handleLogin}>
+            {loginError && <div className="login-error">{loginError}</div>}
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                type="text"
+                id="username"
+                className="login-input"
+                placeholder="Enter 'admin' or 'rahul'"
+                value={loginUser}
+                onChange={(e) => setLoginUser(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                className="login-input"
+                placeholder="Enter password"
+                value={loginPass}
+                onChange={(e) => setLoginPass(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="role">Filing Role</label>
+              <select
+                id="role"
+                className="login-input"
+                value={loginRole}
+                onChange={(e) => setLoginRole(e.target.value as any)}
+              >
+                <option value="Main Agent">Main Agent (Can File & Submit)</option>
+                <option value="Supporting Agent">Supporting Agent (View Only)</option>
+              </select>
+            </div>
+            <button type="submit" className="login-btn">
+              Sign In to Sandbox
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       {/* ── Sidebar ── */}
@@ -273,10 +389,26 @@ export default function App() {
         </div>
 
         <div className="sidebar-footer">
-          <div className="user-avatar">AG</div>
-          <div className="user-info">
-            <span className="user-name">Agent</span>
-            <span className="user-role">Authorised filing agent</span>
+          <div className="user-avatar">{username ? username.substring(0, 2).toUpperCase() : 'AG'}</div>
+          <div className="user-info" style={{ display: 'flex', flexDirection: 'column' }}>
+            <span className="user-name">{username}</span>
+            <span className="user-role">{userRole}</span>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--color-error)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '11px',
+                padding: '2px 0 0 0',
+                fontWeight: 600,
+                width: 'fit-content'
+              }}
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </aside>
@@ -287,13 +419,34 @@ export default function App() {
         <div className="computation-pane">
           <div className="pane-header">
             <h1 className="pane-title">Tax Computation</h1>
-            {loading ? (
-              <span className="badge badge-info"><span className="badge-dot"></span>Calculating…</span>
-            ) : error ? (
-              <span className="badge badge-error">Error</span>
-            ) : (
-              <span className="badge badge-success"><span className="badge-dot"></span>HMRC v1.0</span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {loading ? (
+                <span className="badge badge-info"><span className="badge-dot"></span>Calculating…</span>
+              ) : error ? (
+                <span className="badge badge-error">Error</span>
+              ) : (
+                <span className="badge badge-success"><span className="badge-dot"></span>HMRC v1.0</span>
+              )}
+              <button className="theme-toggle-btn" onClick={toggleTheme} aria-label="Toggle theme">
+                {theme === 'light' ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="pane-body">
@@ -528,15 +681,32 @@ export default function App() {
                 )}
                 <div ref={chatEndRef} />
               </div>
-
+              
               {/* Quick Reply Chips */}
               {currentChips.length > 0 && (
                 <div className="quick-replies">
                   {currentChips.map((chip) => (
-                    <button key={chip.label} className="chip" onClick={() => handleSendMessage(chip.message)}>
+                    <button
+                      key={chip.label}
+                      className="chip"
+                      onClick={() => handleSendMessage(chip.message)}
+                      disabled={userRole === 'Supporting Agent' && currentPhase >= 5}
+                    >
                       {chip.label}
                     </button>
                   ))}
+                </div>
+              )}
+
+              {/* Role Restricted Banner */}
+              {userRole === 'Supporting Agent' && currentPhase >= 5 && (
+                <div className="role-restricted-note" style={{ margin: '0 var(--space-4) var(--space-2) var(--space-4)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <span>Filing Submission Restricted: Supporting Agents cannot declare or file returns to HMRC. Please contact your Main Agent.</span>
                 </div>
               )}
 
@@ -554,19 +724,21 @@ export default function App() {
                     style={{ display: 'none' }}
                     accept=".pdf,.png,.jpg"
                     onChange={handleFileUpload}
+                    disabled={userRole === 'Supporting Agent' && currentPhase >= 5}
                   />
                   <input
                     type="text"
                     className="text-input"
-                    placeholder="Ask about your tax return, or upload a P60…"
+                    placeholder={userRole === 'Supporting Agent' && currentPhase >= 5 ? "Filing submission is restricted for Supporting Agents" : "Ask about your tax return, or upload a P60…"}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                    disabled={userRole === 'Supporting Agent' && currentPhase >= 5}
                   />
                   <button
                     className="send-btn"
                     onClick={() => handleSendMessage()}
-                    disabled={!inputText.trim() && !isTyping}
+                    disabled={(!inputText.trim() && !isTyping) || (userRole === 'Supporting Agent' && currentPhase >= 5)}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <line x1="22" y1="2" x2="11" y2="13" />

@@ -14,7 +14,7 @@ await fastify.register(cors, {
   origin: '*',
 });
 
-const project = process.env.GCP_PROJECT || 'project-db80b905-1ac5-4954-bf0';
+const project = process.env.GCP_PROJECT || 'uk-self-assessment';
 const region = process.env.GCP_REGION || 'europe-west2';
 
 // 1. Health check endpoint
@@ -60,7 +60,7 @@ fastify.post('/api/chat', async (request, reply) => {
     
     // Register terms to prevent leakage
     if (returnObj.clientId) scrubber.registerTerm(returnObj.clientId, 'CLIENT');
-    if (returnObj.sa102) {
+    if (Array.isArray(returnObj.sa102)) {
       for (const emp of returnObj.sa102) {
         if (emp.employerName) scrubber.registerTerm(emp.employerName, 'EMPLOYER');
         if (emp.employerRef) scrubber.registerTerm(emp.employerRef, 'EMPLOYER_REF');
