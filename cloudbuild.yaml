@@ -1,0 +1,5 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'europe-west2-docker.pkg.dev/uk-self-assessment/cloud-run-source-deploy/uk-sa-orchestrator:latest', '-f', 'apps/orchestrator/Dockerfile', '.']
+images:
+  - 'europe-west2-docker.pkg.dev/uk-self-assessment/cloud-run-source-deploy/uk-sa-orchestrator:latest'

@@ -45,9 +45,10 @@ export class GeminiAgent {
   constructor(project: string, region: string, currentPhase?: PhaseKey) {
     this.stateMachine = new StateMachine(currentPhase);
     try {
-      // Default to us-central1 for Vertex AI models to ensure access to Gemini foundation models
-      const location = region === 'europe-west2' ? 'us-central1' : region;
-      this.vertexAI = new VertexAI({ project, location });
+      // Force us-central1 to ensure foundation model availability and bypass Cloud Run region auto-detection
+      process.env.GOOGLE_CLOUD_LOCATION = 'us-central1';
+      process.env.LOCATION = 'us-central1';
+      this.vertexAI = new VertexAI({ project, location: 'us-central1' });
     } catch (e) {
       console.warn('Vertex AI failed to initialize. Running in fallback/mock mode.');
     }
@@ -171,11 +172,33 @@ export class GeminiAgent {
         replyText = response.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
       } catch (err: any) {
         console.error('Error in Vertex AI Loop:', err);
-        replyText = `I ran into an error communicating with Vertex AI: ${err.message}. Running calculation locally.`;
+        if (process.env.GEMINI_API_KEY) {
+          try {
+            console.log('[AI Fallback] Invoking Google AI Studio fallback API...');
+            const fallbackResult = await this.runAIStudioFallback(message, systemPrompt, history);
+            replyText = fallbackResult.reply;
+          } catch (fallbackErr: any) {
+            console.error('AI Studio fallback failed:', fallbackErr);
+            replyText = `I ran into an error communicating with Vertex AI: ${err.message}. AI Studio fallback also failed: ${fallbackErr.message}. Running calculation locally.`;
+          }
+        } else {
+          replyText = `I ran into an error communicating with Vertex AI: ${err.message}. Running calculation locally.`;
+        }
       }
     } else {
-      // Fallback local mode
-      replyText = `I have updated your computation. Total tax due is £${(latestCalc.incomeTax.incomeTaxTotal / 100).toLocaleString()}. Let me know if you would like to claim Overseas Workday Relief or add employment details.`;
+      // Fallback local mode or AI Studio fallback
+      if (process.env.GEMINI_API_KEY) {
+        try {
+          console.log('[AI Fallback] Invoking Google AI Studio fallback API...');
+          const fallbackResult = await this.runAIStudioFallback(message, systemPrompt, history);
+          replyText = fallbackResult.reply;
+        } catch (fallbackErr: any) {
+          console.error('AI Studio fallback failed:', fallbackErr);
+          replyText = `Vertex AI was not initialized. AI Studio fallback failed: ${fallbackErr.message}. Running calculation locally.`;
+        }
+      } else {
+        replyText = `I have updated your computation. Total tax due is £${(latestCalc.incomeTax.incomeTaxTotal / 100).toLocaleString()}. Let me know if you would like to claim Overseas Workday Relief or add employment details.`;
+      }
     }
 
     // 3. Post-Check Guardrail (Scan for numerical hallucinations)
@@ -224,5 +247,54 @@ export class GeminiAgent {
       }
     }
     return cleanReply;
+  }
+
+  private async runAIStudioFallback(
+    message: string,
+    systemPrompt: string,
+    history: any[] = []
+  ): Promise<{ reply: string; calculation: any }> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('No GEMINI_API_KEY environment variable set.');
+
+    // Normalise chat history structure for AI Studio payload
+    const contents = [
+      ...history.map(h => ({
+        role: h.role === 'model' ? 'model' : 'user',
+        parts: h.parts.map((p: any) => ({ text: p.text || '' })),
+      })),
+      { role: 'user', parts: [{ text: message }] }
+    ];
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: {
+            parts: [{ text: systemPrompt }]
+          },
+          generationConfig: {
+            temperature: 0.15,
+            maxOutputTokens: 1200
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`AI Studio API error: ${response.statusText} - ${errText}`);
+    }
+
+    const data = await response.json();
+    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    return {
+      reply: replyText,
+      calculation: null
+    };
   }
 }
