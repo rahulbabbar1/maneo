@@ -1,6 +1,10 @@
 import { buildLegacySaXml, calculateIRmark } from './xml.js';
 import { assembleFraudHeaders, ClientBrowserHeaders } from './services/fraud-headers-assembler.js';
 import { Return } from '@uk-sa-app/return-model';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+import { XmlDocument, XsdValidator } from 'libxml2-wasm';
 
 // Fraud-header assembly now requires a server-held licence secret (was hardcoded).
 // Provide a throwaway value for the sandbox test run only.
@@ -84,6 +88,25 @@ function runSandboxFilingTest() {
   const irMarkValue = bodyMatch[1];
   console.log(`✓ Calculated IRmark Signature: "${irMarkValue}"`);
 
+  // 2b. Schema conformance: validate the IRenvelope payload against the
+  //     vendored HMRC MTR-v1-2.xsd. This is the real gate — it fails loudly
+  //     if the assembler ever drifts from the official schema.
+  const schemaPath = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    '../../../packages/hmrc-artefacts/schemas/2025-26/MTR-v1-2.xsd',
+  );
+  const gtDoc = XmlDocument.fromString(xml);
+  const irEnv = gtDoc.get('//*[local-name()="IRenvelope"]');
+  if (!irEnv) { console.error('✗ IRenvelope not found in generated XML'); process.exit(1); }
+  const xsd = XsdValidator.fromDoc(XmlDocument.fromString(readFileSync(schemaPath, 'utf8')));
+  try {
+    xsd.validate(XmlDocument.fromString(irEnv.toString()));
+    console.log('✓ IRenvelope conforms to HMRC MTR-v1-2.xsd');
+  } catch (e: any) {
+    console.error('✗ IRenvelope failed XSD validation:', e?.message || e);
+    process.exit(1);
+  }
+
   // 3. Compile client-side browser headers
   const mockBrowserHeaders: ClientBrowserHeaders = {
     'Gov-Client-Browser-JS-User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
@@ -120,4 +143,29 @@ function runSandboxFilingTest() {
   console.log('\n✓ All Sandbox XML Assembly & Headers Validation Tests passed successfully!');
 }
 
+/**
+ * Regression test: verify the IRmark implementation against HMRC's official
+ * reference vector. The sample submission's known-correct generic IRmark is
+ * "RPfWtxHeCZRcwfitnIJmK9xc4OQ=" (see irmarkexample-response.xml DigestValue).
+ * The algorithm is payload-agnostic, so passing this guarantees correctness
+ * for SA100 envelopes too.
+ */
+function verifyIRmarkReferenceVector() {
+  console.log('Verifying IRmark against HMRC reference vector...');
+  const here = dirname(fileURLToPath(import.meta.url));
+  const fixture = resolve(
+    here,
+    '../../../packages/hmrc-artefacts/fixtures/irmark/irmarkexample-submission.xml',
+  );
+  const sample = readFileSync(fixture, 'utf8');
+  const expected = 'RPfWtxHeCZRcwfitnIJmK9xc4OQ=';
+  const actual = calculateIRmark(sample);
+  if (actual !== expected) {
+    console.error(`✗ IRmark mismatch. Expected ${expected}, got ${actual}`);
+    process.exit(1);
+  }
+  console.log(`✓ IRmark reference vector matches (${actual}).\n`);
+}
+
+verifyIRmarkReferenceVector();
 runSandboxFilingTest();

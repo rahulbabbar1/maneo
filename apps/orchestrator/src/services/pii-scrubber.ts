@@ -8,6 +8,10 @@ export class PiiScrubber {
   private static UTR_REGEX = /\b\d{10}\b/g;
   private static EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
   private static POSTCODE_REGEX = /\b[A-Z]{1,2}[0-9][A-Z0-9]?\s*[0-9][A-Z]{2}\b/gi;
+  // UK phone (mobile/landline, +44 or 0 prefixed), bank sort code, account number.
+  private static PHONE_REGEX = /\b(?:\+44\s?|0)\d{2,4}[\s-]?\d{3,4}[\s-]?\d{3,4}\b/g;
+  private static SORTCODE_REGEX = /\b\d{2}-\d{2}-\d{2}\b/g;
+  private static ACCOUNT_REGEX = /\b\d{8}\b/g;
 
   /**
    * Registers a specific word (like a client's name or employer name) to be scrubbed.
@@ -57,6 +61,21 @@ export class PiiScrubber {
     // 5. Scrub Email Addresses
     scrubbedText = scrubbedText.replace(PiiScrubber.EMAIL_REGEX, (match) => {
       return this.getOrCreateToken(match.toLowerCase(), 'EMAIL');
+    });
+
+    // 6. Scrub bank sort codes (nn-nn-nn) — before phone/account (most specific).
+    scrubbedText = scrubbedText.replace(PiiScrubber.SORTCODE_REGEX, (match) => {
+      return this.getOrCreateToken(match, 'SORTCODE');
+    });
+
+    // 7. Scrub phone numbers (UK, +44 or 0 prefixed).
+    scrubbedText = scrubbedText.replace(PiiScrubber.PHONE_REGEX, (match) => {
+      return this.getOrCreateToken(match.replace(/\s+/g, ''), 'PHONE');
+    });
+
+    // 8. Scrub bank account numbers (8 digits) — most generic, runs last.
+    scrubbedText = scrubbedText.replace(PiiScrubber.ACCOUNT_REGEX, (match) => {
+      return this.getOrCreateToken(match, 'ACCOUNT');
     });
 
     return scrubbedText;

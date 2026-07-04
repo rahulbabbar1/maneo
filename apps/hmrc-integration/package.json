@@ -9,7 +9,10 @@
     "test": "node dist/test-sandbox.js"
   },
   "dependencies": {
-    "xmlbuilder2": "^3.1.1",
-    "@uk-sa-app/return-model": "*"
+    "@uk-sa-app/return-model": "*",
+    "@xmldom/xmldom": "^0.9.10",
+    "libxml2-wasm": "^0.7.1",
+    "xml-crypto": "^6.1.2",
+    "xmlbuilder2": "^3.1.1"
   }
 }

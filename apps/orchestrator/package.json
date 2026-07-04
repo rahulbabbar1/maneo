@@ -6,7 +6,9 @@
   "types": "./dist/server.d.ts",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "node dist/test-tax-tools.js && node dist/test-pii.js",
+    "eval": "node dist/eval-agent.js"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.1.0",

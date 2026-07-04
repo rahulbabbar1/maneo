@@ -39,4 +39,23 @@ function runPiiTests() {
   console.log('✓ All PII Anonymisation Tests passed successfully!');
 }
 
+function runFinancialPiiTests() {
+  console.log('Starting Financial PII Tests...');
+  const s = new PiiScrubber();
+  const raw = 'Call me on 07911 123456. Sort code 12-34-56, account 12345678.';
+  const scrubbed = s.scrub(raw);
+  console.log(`Scrubbed: "${scrubbed}"`);
+
+  if (scrubbed.includes('07911') || scrubbed.includes('12-34-56') || scrubbed.includes('12345678')) {
+    console.error('✗ Failure: financial PII leaked in scrubbed output!');
+    process.exit(1);
+  }
+  if (!/\[PHONE_\d+\]/.test(scrubbed) || !/\[SORTCODE_\d+\]/.test(scrubbed) || !/\[ACCOUNT_\d+\]/.test(scrubbed)) {
+    console.error('✗ Failure: financial PII tokens are missing!');
+    process.exit(1);
+  }
+  console.log('✓ All Financial PII Tests passed successfully!');
+}
+
 runPiiTests();
+runFinancialPiiTests();

@@ -1,5 +1,4 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -11,7 +10,8 @@ const firebaseConfig = {
   messagingSenderId: '1014225777564',
 };
 
+// Only app + auth are eager (needed at load for the login gate).
+// Firestore is loaded lazily on first session operation — see firestoreService.
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
