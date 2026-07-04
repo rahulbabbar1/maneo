@@ -4,7 +4,7 @@ export interface DisposalInput {
   assetType: 'residential_property' | 'other_property' | 'listed_shares' | 'unlisted_shares' | 'other';
   proceeds: number; // pence
   costs: number;    // pence
-  losses: number;   // pence
+  losses: number;   // pence (allowable expenditure/loss recorded against this disposal)
   claimBadr: boolean;
 }
 
@@ -23,6 +23,8 @@ export interface ComputedCgtBreakdown {
 
 export interface CgtResult {
   totalGainBeforeLosses: number;
+  inYearLossesApplied: number;
+  broughtForwardLossesApplied: number;
   lossesApplied: number;
   annualExemptAmountApplied: number;
   taxableGain: number;
@@ -30,179 +32,120 @@ export interface CgtResult {
   breakdown: ComputedCgtBreakdown[];
 }
 
+type Bucket = 'res' | 'other' | 'badr';
+
 /**
- * Computes Capital Gains Tax (CGT) for a set of disposals.
- * Deducts losses and the Annual Exempt Amount (AEA), then applies
- * the correct rates based on asset type and remaining basic-rate band.
+ * Capital Gains Tax.
+ *
+ * HMRC deduction order (fixes the previous "lump all losses then AEA" bug):
+ *   1. current-year losses: set against current-year gains in full, even if
+ *      this wastes the annual exempt amount;
+ *   2. brought-forward losses: used only to reduce net gains down to the AEA
+ *      (never wasted below it);
+ *   3. the annual exempt amount.
+ * Losses and the AEA are applied to the highest-rate gains first (most
+ * beneficial): residential, then other, then BADR-eligible.
  */
 export function computeCgt(input: CgtInput, config: TaxYearConfig): CgtResult {
   const { disposals, broughtForwardLosses, unusedBasicRateBand } = input;
-  const cgtConfig = config.capitalGains;
+  const cgt = config.capitalGains;
 
-  // 1. Calculate net gain/loss per disposal
-  let residentialGains = 0;
-  let otherGains = 0;
-  let badrGains = 0;
-  let totalLosses = 0;
-
-  for (const disp of disposals) {
-    const net = disp.proceeds - disp.costs - disp.losses;
+  // 1. Split disposals into positive-gain buckets and current-year losses.
+  let resGain = 0, otherGain = 0, badrGain = 0, inYearLosses = 0;
+  for (const d of disposals) {
+    const net = d.proceeds - d.costs - d.losses;
     if (net < 0) {
-      totalLosses += Math.abs(net);
+      inYearLosses += -net;
+    } else if (d.claimBadr) {
+      badrGain += net;
+    } else if (d.assetType === 'residential_property') {
+      resGain += net;
     } else {
-      if (disp.claimBadr) {
-        badrGains += net;
-      } else if (disp.assetType === 'residential_property') {
-        residentialGains += net;
-      } else {
-        otherGains += net;
-      }
+      otherGain += net;
     }
   }
+  const totalGainBeforeLosses = resGain + otherGain + badrGain;
 
-  // Net total gains before losses
-  const totalGainBeforeLosses = residentialGains + otherGains + badrGains;
+  const g: Record<Bucket, number> = { res: resGain, other: otherGain, badr: badrGain };
+  const order: Bucket[] = ['res', 'other', 'badr']; // highest rate first
 
-  // Apply in-year losses and brought-forward losses
-  let remainingLosses = totalLosses + broughtForwardLosses;
-  
-  // Losses should reduce residential gains first (highest tax rate), then other, then BADR
-  let netRes = residentialGains;
-  let netOther = otherGains;
-  let netBadr = badrGains;
+  const deduct = (amount: number): number => {
+    let remaining = amount;
+    let applied = 0;
+    for (const k of order) {
+      if (remaining <= 0) break;
+      const take = Math.min(g[k], remaining);
+      g[k] -= take;
+      remaining -= take;
+      applied += take;
+    }
+    return applied;
+  };
 
-  if (remainingLosses > 0) {
-    const resLoss = Math.min(netRes, remainingLosses);
-    netRes -= resLoss;
-    remainingLosses -= resLoss;
-  }
-  if (remainingLosses > 0) {
-    const otherLoss = Math.min(netOther, remainingLosses);
-    netOther -= otherLoss;
-    remainingLosses -= otherLoss;
-  }
-  if (remainingLosses > 0) {
-    const badrLoss = Math.min(netBadr, remainingLosses);
-    netBadr -= badrLoss;
-    remainingLosses -= badrLoss;
-  }
+  // Step 1: current-year losses in full.
+  const inYearLossesApplied = deduct(inYearLosses);
 
-  const lossesApplied = totalGainBeforeLosses - (netRes + netOther + netBadr);
+  // Step 2: brought-forward losses, restricted so they don't reduce below the AEA.
+  const netAfterInYear = g.res + g.other + g.badr;
+  const usableBf = Math.max(0, netAfterInYear - cgt.annualExemptAmount);
+  const broughtForwardLossesApplied = deduct(Math.min(broughtForwardLosses, usableBf));
 
-  // Apply Annual Exempt Amount (AEA)
-  let remainingAea = cgtConfig.annualExemptAmount; // e.g. £3,000
-  
-  // Deduct AEA from residential gains first, then other, then BADR
-  const initialRes = netRes;
-  const initialOther = netOther;
-  const initialBadr = netBadr;
+  // Step 3: annual exempt amount.
+  const annualExemptAmountApplied = deduct(cgt.annualExemptAmount);
 
-  if (remainingAea > 0 && netRes > 0) {
-    const resAea = Math.min(netRes, remainingAea);
-    netRes -= resAea;
-    remainingAea -= resAea;
-  }
-  if (remainingAea > 0 && netOther > 0) {
-    const otherAea = Math.min(netOther, remainingAea);
-    netOther -= otherAea;
-    remainingAea -= otherAea;
-  }
-  if (remainingAea > 0 && netBadr > 0) {
-    const badrAea = Math.min(netBadr, remainingAea);
-    netBadr -= badrAea;
-    remainingAea -= badrAea;
-  }
+  const lossesApplied = inYearLossesApplied + broughtForwardLossesApplied;
+  const taxableGain = g.res + g.other + g.badr;
 
-  const annualExemptAmountApplied = (initialRes + initialOther + initialBadr) - (netRes + netOther + netBadr);
-  const taxableGain = netRes + netOther + netBadr;
-
-  // Calculate tax charged based on remaining basic rate band
+  // 4. Tax by tier, consuming the remaining basic-rate band.
   let remainingBasicBand = unusedBasicRateBand;
   let totalCgtDue = 0;
   const breakdown: ComputedCgtBreakdown[] = [];
 
-  // BADR gains are taxed flat at 10% and do not use the basic-rate band
-  if (netBadr > 0) {
-    const cgt = Math.round(netBadr * cgtConfig.badrRate);
-    totalCgtDue += cgt;
-    breakdown.push({
-      assetType: 'badr_eligible_assets',
-      gain: netBadr,
-      rate: cgtConfig.badrRate,
-      taxCharged: cgt,
-    });
+  // BADR: flat rate, does not use the basic-rate band.
+  if (g.badr > 0) {
+    const tax = Math.round(g.badr * cgt.badrRate);
+    totalCgtDue += tax;
+    breakdown.push({ assetType: 'badr_eligible_assets', gain: g.badr, rate: cgt.badrRate, taxCharged: tax });
   }
 
-  // Residential Property (18% basic / 24% higher)
-  if (netRes > 0) {
-    let basicAllocated = 0;
-    let higherAllocated = 0;
-
-    if (remainingBasicBand > 0) {
-      basicAllocated = Math.min(netRes, remainingBasicBand);
-      remainingBasicBand -= basicAllocated;
-    }
-    higherAllocated = netRes - basicAllocated;
-
-    const basicCgt = Math.round(basicAllocated * cgtConfig.basicRateResidential);
-    const higherCgt = Math.round(higherAllocated * cgtConfig.higherRateResidential);
-
+  // Residential property: 18% basic / 24% higher.
+  if (g.res > 0) {
+    const basicAllocated = Math.min(g.res, remainingBasicBand);
+    remainingBasicBand -= basicAllocated;
+    const higherAllocated = g.res - basicAllocated;
     if (basicAllocated > 0) {
-      breakdown.push({
-        assetType: 'residential_property_basic',
-        gain: basicAllocated,
-        rate: cgtConfig.basicRateResidential,
-        taxCharged: basicCgt,
-      });
+      const t = Math.round(basicAllocated * cgt.basicRateResidential);
+      totalCgtDue += t;
+      breakdown.push({ assetType: 'residential_property_basic', gain: basicAllocated, rate: cgt.basicRateResidential, taxCharged: t });
     }
     if (higherAllocated > 0) {
-      breakdown.push({
-        assetType: 'residential_property_higher',
-        gain: higherAllocated,
-        rate: cgtConfig.higherRateResidential,
-        taxCharged: higherCgt,
-      });
+      const t = Math.round(higherAllocated * cgt.higherRateResidential);
+      totalCgtDue += t;
+      breakdown.push({ assetType: 'residential_property_higher', gain: higherAllocated, rate: cgt.higherRateResidential, taxCharged: t });
     }
-
-    totalCgtDue += basicCgt + higherCgt;
   }
 
-  // Other Property / Listed & Unlisted Shares (10% basic / 20% higher)
-  if (netOther > 0) {
-    let basicAllocated = 0;
-    let higherAllocated = 0;
-
-    if (remainingBasicBand > 0) {
-      basicAllocated = Math.min(netOther, remainingBasicBand);
-      remainingBasicBand -= basicAllocated;
-    }
-    higherAllocated = netOther - basicAllocated;
-
-    const basicCgt = Math.round(basicAllocated * cgtConfig.basicRate);
-    const higherCgt = Math.round(higherAllocated * cgtConfig.higherRate);
-
+  // Other assets / shares: 10% basic / 20% higher.
+  if (g.other > 0) {
+    const basicAllocated = Math.min(g.other, remainingBasicBand);
+    remainingBasicBand -= basicAllocated;
+    const higherAllocated = g.other - basicAllocated;
     if (basicAllocated > 0) {
-      breakdown.push({
-        assetType: 'other_assets_basic',
-        gain: basicAllocated,
-        rate: cgtConfig.basicRate,
-        taxCharged: basicCgt,
-      });
+      const t = Math.round(basicAllocated * cgt.basicRate);
+      totalCgtDue += t;
+      breakdown.push({ assetType: 'other_assets_basic', gain: basicAllocated, rate: cgt.basicRate, taxCharged: t });
     }
     if (higherAllocated > 0) {
-      breakdown.push({
-        assetType: 'other_assets_higher',
-        gain: higherAllocated,
-        rate: cgtConfig.higherRate,
-        taxCharged: higherCgt,
-      });
+      const t = Math.round(higherAllocated * cgt.higherRate);
+      totalCgtDue += t;
+      breakdown.push({ assetType: 'other_assets_higher', gain: higherAllocated, rate: cgt.higherRate, taxCharged: t });
     }
-
-    totalCgtDue += basicCgt + higherCgt;
   }
 
   return {
     totalGainBeforeLosses,
+    inYearLossesApplied,
+    broughtForwardLossesApplied,
     lossesApplied,
     annualExemptAmountApplied,
     taxableGain,

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Return } from '@uk-sa-app/return-model';
+import { authHeaders } from '../lib/authService.js';
 
 interface ReturnStore {
   returnObj: Return;
@@ -100,9 +101,10 @@ export const useReturnStore = create<ReturnStore>((set, get) => ({
   calculateTax: async () => {
     set({ loading: true, error: null });
     try {
+      const headers = await authHeaders();
       const response = await fetch(`${API_BASE}/api/calculate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           returnObj: get().returnObj,
           taxYear: get().returnObj.taxYear,

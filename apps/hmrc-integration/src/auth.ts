@@ -10,6 +10,8 @@ export interface OAuthToken {
  * sequences against the HMRC Developer Hub endpoints.
  */
 export class HmrcAuthManager {
+  // TODO (C7 follow-up): persist tokens in GCP Secret Manager keyed to the agent,
+  // encrypted at rest, instead of this in-memory Map (lost on restart). Add PKCE.
   private tokenStore: Map<string, OAuthToken> = new Map();
   private tokenEndpoint = 'https://test-api.service.hmrc.gov.uk/oauth/token';
   private authorizeEndpoint = 'https://test-api.service.hmrc.gov.uk/oauth/authorize';
@@ -22,13 +24,19 @@ export class HmrcAuthManager {
 
   /**
    * Generates the HMRC Gateway sign-in redirect URL.
+   * `state` is required for CSRF protection: generate a random, single-use
+   * value, store it against the session, and verify it on the callback.
    */
-  generateAuthorizeUrl(scope: string = 'write:self-assessment'): string {
+  generateAuthorizeUrl(state: string, scope: string = 'write:self-assessment'): string {
+    if (!state || state.length < 16) {
+      throw new Error('A sufficiently random OAuth `state` value is required for CSRF protection.');
+    }
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
       scope,
+      state,
     });
     return `${this.authorizeEndpoint}?${params.toString()}`;
   }
@@ -67,16 +75,9 @@ export class HmrcAuthManager {
       this.tokenStore.set(agentId, token);
       return token;
     } catch (error: any) {
-      // Return simulated token for offline/sandbox fallback testing if network fails
-      console.warn('OAuth endpoint unreachable. Returning simulated token for testing.', error.message);
-      const mockToken: OAuthToken = {
-        accessToken: `mock_access_token_${Date.now()}`,
-        refreshToken: `mock_refresh_token_${Date.now()}`,
-        expiresAt: Date.now() + 3600 * 1000,
-        scopes: ['write:self-assessment'],
-      };
-      this.tokenStore.set(agentId, mockToken);
-      return mockToken;
+      // Fail loudly. A filing product must never proceed on a fabricated token.
+      console.error('OAuth code exchange failed:', error.message);
+      throw error;
     }
   }
 
@@ -118,14 +119,9 @@ export class HmrcAuthManager {
       this.tokenStore.set(agentId, updatedToken);
       return updatedToken.accessToken;
     } catch (error: any) {
-      console.warn('OAuth refresh failed. Reverting to token simulation refresh.', error.message);
-      const newAccessToken = `mock_refreshed_token_${Date.now()}`;
-      this.tokenStore.set(agentId, {
-        ...token,
-        accessToken: newAccessToken,
-        expiresAt: Date.now() + 3600 * 1000,
-      });
-      return newAccessToken;
+      // Fail loudly and drive re-authorisation rather than faking a token.
+      console.error('OAuth token refresh failed:', error.message);
+      throw error;
     }
   }
 

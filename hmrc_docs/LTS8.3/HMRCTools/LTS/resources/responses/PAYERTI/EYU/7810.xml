@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7810</Number>
+		<Type>business</Type>
+		<Text>This submission cannot be accepted as the pre-defined date for the previous tax year has not yet passed</Text>
+		<Location></Location>
+</Error>

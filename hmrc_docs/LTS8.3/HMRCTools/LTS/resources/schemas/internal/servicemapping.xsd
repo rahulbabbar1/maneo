@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema targetNamespace="http://www.hmrc.gov.uk/internal/servicemapping/1" xmlns:sm="http://www.hmrc.gov.uk/internal/servicemapping/1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.1" id="Service-Mapping">
+	<xsd:annotation>
+		<xsd:documentation>Schema used to define service-specific error mapping for validation results.</xsd:documentation>
+	</xsd:annotation>
+	<xsd:element name="ServiceMapping">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="GlobalErrors" type="sm:GlobalErrors" minOccurs="0"/>
+				<xsd:element name="Error" type="sm:Error" minOccurs="0" maxOccurs="unbounded"/>
+			</xsd:sequence>
+			<xsd:attribute name="form" type="xsd:anyURI" use="required"/>
+		</xsd:complexType>
+	</xsd:element>
+	<xsd:complexType name="GlobalErrors">
+		<xsd:sequence>
+			<xsd:element name="GlobalError" maxOccurs="unbounded">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="UserCode" type="xsd:nonNegativeInteger" minOccurs="0"/>
+						<xsd:element name="UserText" type="xsd:string" minOccurs="0"/>
+					</xsd:sequence>
+					<xsd:attribute name="id" type="xsd:nonNegativeInteger" use="required"/>
+				</xsd:complexType>
+			</xsd:element>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="Error">
+		<xsd:sequence>
+			<xsd:element name="Location" type="xsd:string" minOccurs="0"/>
+			<xsd:element name="ErrorNumbers">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="Number" maxOccurs="unbounded">
+							<xsd:complexType>
+								<xsd:sequence>
+									<xsd:element name="UserCode" type="xsd:nonNegativeInteger"/>
+									<xsd:element name="UserText" type="xsd:string"/>
+								</xsd:sequence>
+								<xsd:attribute name="id" type="xsd:nonNegativeInteger" use="required"/>
+							</xsd:complexType>
+						</xsd:element>
+					</xsd:sequence>
+				</xsd:complexType>
+			</xsd:element>
+		</xsd:sequence>
+		<xsd:attribute name="xpath" use="required"/>
+	</xsd:complexType>
+</xsd:schema>

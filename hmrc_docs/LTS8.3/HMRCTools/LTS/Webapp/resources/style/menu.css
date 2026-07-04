@@ -1,0 +1,119 @@
+/* Menu */
+
+ul#main-menu
+{
+  font:bold 1em arial,sans-serif;
+  margin-left:.3em;
+}
+
+ul#main-menu li
+{
+  border:1px solid #096;
+  padding:.5em 5px;
+  margin:-.7px auto;
+  border-top:0;
+}
+
+ul#main-menu li a
+{
+  display:block;
+}
+
+ul#main-menu li.first
+{
+  color:#fff;
+  background:#096 url(../images/corner.gif) no-repeat top right;
+  font-size:1.38em;
+  padding:.25em 5px;
+  border:0;
+}
+
+ul#main-menu li.selected
+{
+  background:#efe;
+  margin-top:.7px; /* Firefox, Netscape */
+}
+
+ul#main-menu li.selected a
+{
+  background:url(../images/arrowRightBlack.gif) no-repeat 2px .25em;
+  padding-left:15px;
+  color:#000;
+  font-size:1.07em;
+}
+
+ul#main-menu li.selected.submenu ul li a
+{
+  font-size:1em;
+}
+
+ul#main-menu li a
+{
+  background:url(../images/arrowRightGreen.gif) no-repeat 2px .25em;
+  padding-left:15px;
+  display:block;
+}
+
+
+
+/* Nested menu */
+
+ul#main-menu li.submenu
+{
+  background:#efe;
+  margin-top:.7px; /* Firefox, Netscape */
+  padding:0;
+  border-bottom:0;
+}
+
+ul#main-menu li.submenu a
+{
+  background:url(../images/arrowDownBlack.gif) no-repeat 0 .7em;
+  padding:.5em .25em .5em 15px;
+  margin-left:5px;
+  display:block;
+  color:#000;
+}
+
+ul#main-menu li.submenu ul
+{
+  background:#fff;
+  border-top:1px solid #096;
+  border-bottom:1px solid #096;
+
+}
+
+ul#main-menu li.submenu ul li.first
+{
+  background:none;
+  font-size:1em;
+}
+
+ul#main-menu li.submenu ul li
+{
+  border:0;
+  padding-top:.25em;
+  padding-bottom:.25em;
+}
+
+ul#main-menu li.submenu ul li a
+{
+  background:url(../images/arrowRightGreen.gif) no-repeat 2px .25em;
+  color:#063;
+  margin-left:12px;
+  padding:0 0 0 15px;
+}
+
+ul#main-menu li.submenu ul li.selected
+{
+  background:none;
+  margin-top:-.7px; /* Firefox, Netscape */
+}
+
+ul#main-menu li.submenu ul li.selected a
+{
+  color:#000;
+  background:url(../images/arrowRightBlack.gif) no-repeat 2px .25em;
+  padding-left:15px;
+  font-size:1.07em;
+}

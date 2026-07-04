@@ -5,7 +5,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { computeIncomeTax, ComputeIncomeTaxInput, computeFullReturn } from '@uk-sa-app/tax-core';
-import { getConfig } from '@uk-sa-app/tax-config';
+import { getConfig, configHash } from '@uk-sa-app/tax-config';
 import { Return } from '@uk-sa-app/return-model';
 
 // 1. Initialize MCP Server
@@ -104,7 +104,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               version: {
                 taxYear,
                 methodologyVersion: 'HMRC-v1',
-                engineVersion: '1.0.0',
+                engineVersion: '1.1.0',
+                configHash: configHash(config),
               },
             }, null, 2),
           },
@@ -126,7 +127,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               version: {
                 taxYear,
                 methodologyVersion: 'HMRC-v1',
-                engineVersion: '1.0.0',
+                engineVersion: '1.1.0',
+                configHash: configHash(config),
               },
             }, null, 2),
           },

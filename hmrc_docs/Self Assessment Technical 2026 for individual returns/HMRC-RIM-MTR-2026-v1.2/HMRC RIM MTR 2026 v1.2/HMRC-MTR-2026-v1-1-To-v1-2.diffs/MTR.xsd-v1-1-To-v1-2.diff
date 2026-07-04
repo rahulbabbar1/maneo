@@ -1,0 +1,39 @@
+@@
+ <?xml version="1.0" encoding="UTF-8"?>
+ 
+-<xsd:schema version='1.1' elementFormDefault='qualified' attributeFormDefault='unqualified' id='MTR' targetNamespace='http://www.govtalk.gov.uk/taxation/SA/SA100/25-26/1' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:MTR='http://www.govtalk.gov.uk/taxation/SA/SA100/25-26/1'>
++<xsd:schema version='1.2' elementFormDefault='qualified' attributeFormDefault='unqualified' id='MTR' targetNamespace='http://www.govtalk.gov.uk/taxation/SA/SA100/25-26/1' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:MTR='http://www.govtalk.gov.uk/taxation/SA/SA100/25-26/1'>
+   <xsd:annotation>
+     <xsd:appinfo>
+       <gms:Metadata xmlns:gms='http://www.govtalk.gov.uk/CM/gms-xs'>
+         <gms:Audience>e-service developers</gms:Audience>
+         <gms:Contributor>CoreFiling Ltd</gms:Contributor>
+@@
+         <gms:Creator>HMRC</gms:Creator>
+         <gms:Date>
+           <gms:Created>2007-02-07</gms:Created>
+         </gms:Date>
+         <gms:Date>
+-          <gms:Modified>2025-10-31</gms:Modified>
++          <gms:Modified>2026-03-31</gms:Modified>
+         </gms:Date>
+-        <gms:Identifier>MTR-1.1</gms:Identifier>
++        <gms:Identifier>MTR-1.2</gms:Identifier>
+         <gms:Language>[ISO 639-2/B] ENG</gms:Language>
+         <gms:Publisher>HMRC</gms:Publisher>
+         <gms:Relation>
+           <gms:ProvidesDefinitionOf>IRenvelope</gms:ProvidesDefinitionOf>
+         </gms:Relation>
+@@
+         </gms:Relation>
+         <gms:Relation>
+           <gms:ProvidesDefinitionOf>MTR_YesType</gms:ProvidesDefinitionOf>
+         </gms:Relation>
+         <gms:Rights>
+-          <gms:Copyright>(C) Crown Copyright 2001-2025</gms:Copyright>
++          <gms:Copyright>(C) Crown Copyright 2001-2026</gms:Copyright>
+         </gms:Rights>
+         <gms:Subject>Economics, Finance and Tax</gms:Subject>
+         <gms:Title>SA Main Tax Return Transaction Schema</gms:Title>
+         <gms:Type>message</gms:Type>
+       </gms:Metadata>

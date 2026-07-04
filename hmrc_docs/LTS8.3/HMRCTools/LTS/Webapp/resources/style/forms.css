@@ -1,0 +1,64 @@
+/* Form */
+
+div.portlet-body form
+{
+  clear:both;
+  margin:.5em 0 1em 0;
+}
+
+input, button, select, option
+{
+  font-size:1em;
+}
+
+
+
+/* Record style */
+
+form.record table colgroup col.labels
+{
+  width:1%;
+}
+
+form.record table colgroup col.data
+{
+  width:1%;
+}
+
+form.record table tbody tr th
+{
+  text-align:left;
+  font-weight:normal;
+}
+
+form.record table caption
+{
+  text-align:left;
+  padding-bottom:.75em;
+}
+
+form.record table tbody tr.buttons td
+{
+  text-align:right;
+}
+
+
+
+/* Results below - Search forms with results appearing below them */
+
+div.portlet-body form.results-below
+{
+  border-bottom:1px solid #ccc;
+  padding-bottom:1em;
+}
+
+
+
+/* Inline style - form fields on same line */
+div.portlet div.portlet-body form.inline input,
+div.portlet div.portlet-body form.inline select,
+div.portlet div.portlet-body form.inline button
+{
+  margin-left:.25em;
+  margin-right:1em;
+}

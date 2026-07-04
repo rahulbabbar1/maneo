@@ -1,0 +1,191 @@
+/* Reset Styles */
+
+*
+{
+  margin:0;
+  padding:0;
+}
+
+a img
+{
+  border:0;
+}
+
+
+
+/* Default Styles */
+
+body
+{
+  background:#fff;
+  color:#000;
+  font:76%/1.0 Verdana,sans-serif; /* Font-sizes that don't break IE keylines on resizing (%): 66,71,72,76,85,88,89,90,92,99,100,101,110,113,114,119,120 */
+  width:63.5em; /* 770px @ Default IE Text-Size (Width of page in pixels * 6.243 / Verdana font-size in percent) */
+}
+
+a
+{
+  color:#063;
+  text-decoration:underline;
+}
+
+a:hover
+{
+  color:#f00!important;
+  text-decoration:underline!important;
+}
+
+ul li a
+{
+  text-decoration:none;
+}
+
+ul li p a
+{
+  text-decoration:underline;
+}
+
+ul li
+{
+  list-style:none;
+}
+
+
+
+/* headings */
+
+h3
+{
+  font-size: 1em;
+  color:#096;
+  padding-top:1em;
+}
+
+
+
+/* Paragraphs */
+
+p
+{
+  margin-top:.5em;
+  margin-bottom:1em;
+}
+
+p.new-section
+{
+  clear:both;
+  margin-top:2.5em;
+}
+
+
+
+/* Columns */
+
+div.columns
+{
+	width:96%;
+	clear:left;
+}
+
+div.columns div.column
+{
+  word-wrap:break-word;
+  float:left;
+}
+
+div.column.menu-column{width:22%;}
+div.column.page-column{width:78%;}
+div.column.quarter{width:25%;}
+div.column.three-quarter{width:75%}
+div.columns.two-columns div.column{width:50%;}
+
+div.column.menu-column,
+div.column.page-column,
+div.column.quarter,
+div.column.three-quarter,
+div.columns.two-columns div.column
+{
+  margin-right:-1px; /* IE */
+}
+
+
+
+/* Errors */
+
+div.error
+{
+  color:#f00;
+  background:url(../images/warningTriangleIcon.gif) no-repeat left .5em;
+  padding:.25em 0 .25em 25px;
+  height:100%; /* IE */
+}
+
+*.warn
+{
+  color:#f00;
+  font-weight:bold;
+  background:url(../images/warningTriangle.gif) left center no-repeat;
+  padding:1em 0 1em 40px;
+  height:4px; /* IE */
+}
+*.info
+{
+  color:green;
+  font-weight:bold;
+  background:url(../images/info.gif) left center no-repeat;
+  padding:1em 0 1em 40px;
+  height:1px;  /* IE */
+}
+
+
+div.error a
+{
+  color:#f00;
+}
+
+div.error.large
+{
+  background:url(../images/warningTriangle.gif) left center no-repeat;
+  padding:1em 0 1em 40px;
+  height:auto; /* IE */
+}
+
+
+
+/* Links */
+a.previous
+{
+  font-size:1.1em;
+  font-weight:bold;
+  background:url(../images/arrowLeftCircle.gif) no-repeat left center;
+  padding-left:1.5em;
+  color:#096;
+}
+
+
+
+/* Hide content intended for screen readers */
+.screen-reader
+{
+  position:absolute;
+  top:-100em;
+  left:0; /* Suppresses unnecessary horizontal scrolling */
+}
+
+
+
+/* Alert */
+
+*.alert
+{
+  color:#f00;
+}
+
+
+
+/* Access Key */
+
+span.access-key
+{
+  text-decoration:underline;
+}

@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>5001</Number>
+		<Type>business</Type>
+		<Text>Your submission contains an unrecognised namespace</Text>
+		<Location></Location>
+</Error>

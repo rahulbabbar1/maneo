@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PAYE_MOVConfig>
+	<!--logging level range from 0 - 8. 1=SEVERE, 8=All, 0=OFF-->
+	<logginglevel>8</logginglevel>
+	<logfile>logs\\logs.txt</logfile>
+	<Identity>
+		<ServiceMessageType>IR-PAYE-MOV,IR-PAYE-MOV-TIL</ServiceMessageType>
+		<EnvelopeNamespace>http://www.govtalk.gov.uk/CM/envelope</EnvelopeNamespace>
+	</Identity>
+	<Handlers>
+		<Handler ExitOnError="false">uk.gov.hmrc.aspire.lts.requesthandlers.MetaDataHandler</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.ValidationHandler</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.PAYEDownloadHandler</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.IRMarkHandler</Handler>
+	</Handlers>
+	<Data>
+		<MetaData key="MessageClass">/GovTalkMessage/Header/MessageDetails/Class</MetaData>
+		<MetaData key="IR_HMRC_Mark">/GovTalkMessage/Body/IRenvelope/IRheader/IRmark</MetaData>
+		<MetaData key="SystemTimestamp">/GovTalkMessage/GovTalkDetails/ChannelRouting/Timestamp</MetaData>
+		<MetaData key="Credential">/GovTalkMessage/GovTalkDetails/Keys/Key</MetaData>
+		<MetaData key="EmployerName">/GovTalkMessage/Body/IRenvelope/InYearMovements/EmployerName</MetaData>
+	</Data>
+</PAYE_MOVConfig>

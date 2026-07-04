@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.5" id="WebApp_ID">
+	<display-name>
+		    Local Test Service
+    </display-name>
+	<description>
+			  Local Test Service
+    </description>	
+	<!-- FS3.1 Style Servlet mappings-->
+	<servlet>
+		<servlet-name>SubmitExplainDelayToDeliveryServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE837:V3.13</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.SubmitExplainDelayToDeliveryDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>SubmitReportofReceiptServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE818:V3.13</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.SubmitReportOfReceiptDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>GetNewMessagesServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>http://www.govtalk.gov.uk/taxation/GetNewEventMessages/1</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.GetNewMessagesDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>GetMovementForTraderServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>http://www.govtalk.gov.uk/taxation/GetAllEventMessagesForMovement/1</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.GetMovementForTraderDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>AcknowledgeMessagesReceiptServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>http://www.govtalk.gov.uk/taxation/acknowledgeMessagesReceipt/1</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.AcknowledgeMessagesReceiptDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>SubmitChangeOfDestinationServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE813:V3.13</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.SubmitChangeOfDestinationDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>SubmitCancellationServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE810:V3.13</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.SubmitCancellationDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>PreValidateTraderServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>http://www.govtalk.gov.uk/taxation/PreValidateTrader/1</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.PreValidateTraderDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>SubmitDraftMovementServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE815:V3.13</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.SubmitDraftMovementDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>SubmitSplitMovementServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE825:V3.13</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.SubmitSplitMovementDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>SubmitAlertOrRejectionMovementServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE819:V3.13</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.SubmitAlertOrRejectionMovementDelegate</param-value>
+		</init-param>
+	</servlet>
+	<servlet>
+		<servlet-name>SubmitReasonForShortageServletFS3</servlet-name>
+		<display-name>LTS SOAP Servlet FS3</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SOAPServletFS1</servlet-class>
+		<init-param>
+			<param-name>payload.namespace</param-name>
+			<param-value>urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:IE871:V3.13</param-value>
+		</init-param>
+		<init-param>
+			<param-name>delegate.fqcn</param-name>
+			<param-value>uk.gov.hmrc.aspire.lts.soap.http.delegate.emcs.fs3.SubmitReasonForShortageDelegate</param-value>
+		</init-param>
+	</servlet>
+	<!-- end FS4 Style Servlet mappings-->
+	<servlet>
+		<servlet-name>SoapClientServlet</servlet-name>
+		<display-name>LTS SOAP Client Servlet</display-name>
+		<servlet-class>uk.gov.hmrc.aspire.lts.servlets.SoapClientServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>EMCSSoapSubmitServlet</servlet-name>
+		<jsp-file>/resources/jsp/emcssubmitsoap.jsp</jsp-file>
+	</servlet>
+	<!-- EMCS FS4 style Servlet mappings -->
+	<servlet-mapping>
+		<servlet-name>SubmitExplainDelayToDeliveryServletFS3</servlet-name>
+		<url-pattern>/EMCS/SubmitExplainDelayToDelivery/4</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>SubmitReportofReceiptServletFS3</servlet-name>
+		<url-pattern>/EMCS/SubmitReportofReceipt/4</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>GetNewMessagesServletFS3</servlet-name>
+		<url-pattern>/EMCS/GetNewMessages/4</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>GetMovementForTraderServletFS3</servlet-name>
+		<url-pattern>/EMCS/GetMovementForTrader/4</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>AcknowledgeMessagesReceiptServletFS3</servlet-name>
+		<url-pattern>/EMCS/AcknowledgeMessagesReceipt/4</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>SubmitChangeOfDestinationServletFS3</servlet-name>
+		<url-pattern>/EMCS/SubmitChangeOfDestination/3</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>SubmitCancellationServletFS3</servlet-name>
+		<url-pattern>/EMCS/SubmitCancellation/3</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>PreValidateTraderServletFS3</servlet-name>
+		<url-pattern>/EMCS/PreValidateTrader/3</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>SubmitDraftMovementServletFS3</servlet-name>
+		<url-pattern>/EMCS/SubmitDraftMovement/3</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>SubmitAlertOrRejectionMovementServletFS3</servlet-name>
+		<url-pattern>/EMCS/SubmitAlertOrRejectionMovement/2</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>SubmitSplitMovementServletFS3</servlet-name>
+		<url-pattern>/EMCS/SubmitSplitMovement/2</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>SubmitReasonForShortageServletFS3</servlet-name>
+		<url-pattern>/EMCS/SubmitReasonForShortage/2</url-pattern>
+	</servlet-mapping>
+	<!-- end EMCS FS3.1 style Servlet mappings -->
+	<servlet-mapping>
+		<servlet-name>SoapClientServlet</servlet-name>
+		<url-pattern>/SoapClientServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>EMCSSoapSubmitServlet</servlet-name>
+		<url-pattern>/EMCS</url-pattern>
+	</servlet-mapping>
+	<!--
+		All Note: Servlet mappings are defined within the LTSStandalone application class, not within
+		this Web.xml
+	-->
+	<welcome-file-list>
+		<welcome-file>/resources/jsp/submit.jsp</welcome-file>
+	</welcome-file-list>
+</web-app>

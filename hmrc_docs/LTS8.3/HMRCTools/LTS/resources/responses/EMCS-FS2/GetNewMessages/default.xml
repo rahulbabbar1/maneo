@@ -1,0 +1,6 @@
+<GetNewMessagesResponse xmlns="http://www.govtalk.gov.uk/taxation/EMCS/GetNewMessagesResponse/3">
+<NewMessagesDataResponse xmlns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<Messages/>
+	<CountOfMessagesAvailable>0</CountOfMessagesAvailable>
+</NewMessagesDataResponse>
+</GetNewMessagesResponse>

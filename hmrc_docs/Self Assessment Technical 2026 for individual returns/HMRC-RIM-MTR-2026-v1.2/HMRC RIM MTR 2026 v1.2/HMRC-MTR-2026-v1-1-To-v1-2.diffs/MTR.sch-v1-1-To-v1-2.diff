@@ -1,0 +1,15 @@
+@@
+       <sch:assert id='a_FIG-NS-NRSIT-UK-TAX-AMO.1' diagnostics='errorCode.FIG-NS-NRSIT-UK-TAX-AMO.1 transactional.FIG-NS-NRSIT-UK-TAX-AMO.1 transactional.en.FIG-NS-NRSIT-UK-TAX-AMO.1 ' test='../../MTR:Totals/MTR:SWTOrUKTax'>[FOR47] should be present if [FOR48D (pseudo)] is present</sch:assert>
+     </sch:rule>
+   </sch:pattern>
+   <sch:pattern>
+     <sch:rule context='/hd:GovTalkMessage/hd:Body/MTR:IRenvelope/MTR:MTR/MTR:SA106/MTR:OtherOverseasIncomeAndGains/MTR:NonSavingsIncomeNRSItrusts/MTR:IncomeSource/MTR:TaxableAmountOnInterestAndOtherSavings'>
+-      <sch:assert id='a_FIG-NS-NRSIT-UK-CHRG-AMO.0' diagnostics='errorCode.FIG-NS-NRSIT-UK-CHRG-AMO.0 transactional.FIG-NS-NRSIT-UK-CHRG-AMO.0 transactional.en.FIG-NS-NRSIT-UK-CHRG-AMO.0 ' test="not(../MTR:ClaimToFTCR = 'yes') or (math:abs((.) - (../MTR:IncomeBeforeTax)) &lt; 0.001)">If [FOR48E] is 'Y' then [FOR48F (pseudo)] must eq [FOR48B]</sch:assert>
+-      <sch:assert id='a_FIG-NS-NRSIT-UK-CHRG-AMO.1' diagnostics='errorCode.FIG-NS-NRSIT-UK-CHRG-AMO.1 transactional.FIG-NS-NRSIT-UK-CHRG-AMO.1 transactional.en.FIG-NS-NRSIT-UK-CHRG-AMO.1 ' test='../MTR:ClaimToFTCR or (math:abs(((.)) - ((sum(../MTR:IncomeBeforeTax) - ../MTR:ForeignTax))) &lt; 0.001)'>If [FOR48E] is not 'Y' then [FOR48F (pseudo)] must eq [FOR48B] minus [FOR48C]</sch:assert>
++      <sch:assert id='a_FIG-NS-NRSIT-UK-CHRG-AMO.0' diagnostics='errorCode.FIG-NS-NRSIT-UK-CHRG-AMO.0 transactional.FIG-NS-NRSIT-UK-CHRG-AMO.0 transactional.en.FIG-NS-NRSIT-UK-CHRG-AMO.0 ' test="not(../MTR:ClaimToFTCR = 'yes') or (math:abs((.) - (sum(../MTR:IncomeBeforeTax))) &lt; 0.001)">If [FOR48E] is 'Y' then [FOR48F (pseudo)] must eq [FOR48B]</sch:assert>
++      <sch:assert id='a_FIG-NS-NRSIT-UK-CHRG-AMO.1' diagnostics='errorCode.FIG-NS-NRSIT-UK-CHRG-AMO.1 transactional.FIG-NS-NRSIT-UK-CHRG-AMO.1 transactional.en.FIG-NS-NRSIT-UK-CHRG-AMO.1 ' test='../MTR:ClaimToFTCR or (math:abs(((.)) - ((sum(../MTR:IncomeBeforeTax) - sum(../MTR:ForeignTax)))) &lt; 0.001)'>If [FOR48E] is not 'Y' then [FOR48F (pseudo)] must eq [FOR48B] minus [FOR48C]</sch:assert>
+       <sch:assert id='a_FIG-NS-NRSIT-UK-CHRG-AMO.2' diagnostics='errorCode.FIG-NS-NRSIT-UK-CHRG-AMO.2 transactional.FIG-NS-NRSIT-UK-CHRG-AMO.2 transactional.en.FIG-NS-NRSIT-UK-CHRG-AMO.2 ' test='../../MTR:Totals/MTR:TaxableAmount'>[FOR48] should be present if [FOR48F (pseudo)] is present</sch:assert>
+     </sch:rule>
+   </sch:pattern>
+   <sch:pattern>
+     <sch:rule context='/hd:GovTalkMessage/hd:Body/MTR:IRenvelope/MTR:MTR/MTR:SA106/MTR:OtherOverseasIncomeAndGains/MTR:NonSavingsIncomeNRSItrusts/MTR:Totals/MTR:SWTOrUKTax'>

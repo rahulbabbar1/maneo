@@ -1,0 +1,2 @@
+Updated to include JIRA bug reference AXIS2-1790
+- schemaLocation element of import statements should contain URI reference to schema document

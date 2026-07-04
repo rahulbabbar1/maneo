@@ -1,0 +1,7 @@
+<PreValidateTraderResponse xmlns="http://www.govtalk.gov.uk/taxation/EMCS/PreValidateTraderResponse/1">
+	<tns:ExciseTraderValidationResponse xmlns:tns="http://www.govtalk.gov.uk/taxation/EMCS/ExciseTraderValidationResponse" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+		<tns:ExciseTraderResponse exciseID="GBTCA45678901" validTrader="false">
+			<tns:ValidateDateTimeStamp>2001-12-17T09:30:47.00</tns:ValidateDateTimeStamp>
+		</tns:ExciseTraderResponse>
+	</tns:ExciseTraderValidationResponse>
+</PreValidateTraderResponse>

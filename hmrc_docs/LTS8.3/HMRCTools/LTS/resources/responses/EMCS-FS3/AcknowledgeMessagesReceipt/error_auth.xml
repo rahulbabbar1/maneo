@@ -1,0 +1,14 @@
+<AcknowledgeMessagesReceiptResponse xmlns="http://www.govtalk.gov.uk/taxation/EMCS/AcknowledgeMessagesReceiptResponse/1">
+<ErrorResponse xmlns="http://www.govtalk.gov.uk/CM/errorresponse" SchemaVersion="2.0">
+	<Application>
+		<MessageCount>1</MessageCount>
+	</Application>
+	<Error>
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>8901</Number>
+		<Type>business</Type>
+		<Text>Your authentication details are invalid.</Text>
+		<Location>Credentials</Location>
+	</Error>
+</ErrorResponse>
+</AcknowledgeMessagesReceiptResponse>

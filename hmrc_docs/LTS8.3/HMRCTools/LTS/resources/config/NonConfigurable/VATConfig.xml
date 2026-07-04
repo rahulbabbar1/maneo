@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VATConfig>
+	<!--logging level range from 0 - 8. 1=SEVERE, 8=All, 0=OFF-->
+	<logginglevel>8</logginglevel>
+	<logfile>logs\\logs.txt</logfile>
+	<Identity>
+		<ServiceMessageType>HMRC-VAT-DEC</ServiceMessageType>
+		<EnvelopeNamespace>http://www.govtalk.gov.uk/CM/envelope</EnvelopeNamespace>
+	</Identity>
+	<Handlers>
+		<Handler ExitOnError="false">uk.gov.hmrc.aspire.lts.requesthandlers.MetaDataHandler</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.ValidationHandler</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.IRMarkHandlerOpt</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.InfoHandler</Handler>
+	</Handlers>
+	<Data>
+		<MetaData key="MessageClass">/GovTalkMessage/Header/MessageDetails/Class</MetaData>
+		<MetaData key="IR_HMRC_Mark">/GovTalkMessage/Body/IRenvelope/IRheader/IRmark</MetaData>
+		<MetaData key="CorrelationID">/GovTalkMessage/Header/MessageDetails/CorrelationID</MetaData>
+		<MetaData key="Credential">/GovTalkMessage/GovTalkDetails/Keys/Key</MetaData>
+	</Data>
+</VATConfig>

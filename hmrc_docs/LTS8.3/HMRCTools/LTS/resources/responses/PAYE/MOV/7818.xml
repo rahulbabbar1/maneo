@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7818</Number>
+		<Type>business</Type>
+		<Text>This PAYE In Year Movement submission cannot be accepted as the employer has been invited to join RTI</Text>
+		<Location></Location>
+</Error>

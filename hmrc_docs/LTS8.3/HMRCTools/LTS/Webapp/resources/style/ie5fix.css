@@ -1,0 +1,75 @@
+/* Body width is not fixed */
+
+body div,
+div#header,
+ul#footer
+{
+  width:62.5em;
+}
+
+body div div
+{
+  width:auto;
+}
+
+
+
+/* Portlets are too wide */
+
+div.column div.portlet
+{
+  width:100%;
+}
+
+
+
+/* Table text is too big */
+
+table
+{
+  font-size:1em;
+}
+
+
+
+/* List items are too far away from their markers */
+
+ul li
+{
+  display:inline-block;
+}
+
+div.portlet div.portlet-body ul
+{
+  margin-left:-1em;
+}
+
+div#banner ul#site-breadcrumb,
+ul.catalogue li ul.options li
+{
+  margin-left:-1.25em;
+}
+
+div.portlet-body ul.catalogue li
+{
+  margin-left:.5em;
+}
+
+div.portlet-body ul li p
+{
+  margin:0;
+}
+
+
+
+/* Menu items are not touching */
+
+ul#main-menu li
+{
+  margin-top:-2px;
+}
+
+ul#main-menu li.first
+{
+  margin-top:0;
+}

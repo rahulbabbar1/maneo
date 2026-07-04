@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LOBConfig xmlns="http://www.w3.org/2005/Atom">
+	<LOB>
+		<MessageClass name="HMRC-SA-SA100" eoy="false"/>
+		<ConfigFileName>SA100Config.xml</ConfigFileName>
+		<LoggingName>SA100</LoggingName>
+		<Composer>MessageComposer</Composer>				
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-SA-SA800" eoy="false"/>
+		<ConfigFileName>SA800-900Config.xml</ConfigFileName>
+		<LoggingName>SA800</LoggingName>
+		<Composer>MessageComposer</Composer>					
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-SA-SA900" eoy="false"/>
+		<ConfigFileName>SA800-900Config.xml</ConfigFileName>
+		<LoggingName>SA900</LoggingName>
+		<Composer>MessageComposer</Composer>					
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-CT-CT600" eoy="false"/>
+		<ConfigFileName>CTConfig.xml</ConfigFileName>
+		<LoggingName>CT</LoggingName>
+		<Composer>MessageComposer</Composer>						
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-VAT-DEC" eoy="false"/>
+		<ConfigFileName>VATConfig.xml</ConfigFileName>
+		<LoggingName>VAT</LoggingName>
+		<Composer>VATMessageComposer</Composer>					
+	</LOB>
+	<LOB>
+		<MessageClass name="IR-PAYE-MOV" eoy="false"/>
+		<ConfigFileName>PAYE_MOV_Config.xml</ConfigFileName>
+		<LoggingName>PAYE MOV</LoggingName>
+		<StaticResponse StaticFolder="PAYE\MOV"/>
+		<Composer>MessageComposer</Composer>		
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-PAYE-RTI-FPS" eoy="false"/>
+		<ConfigFileName>PAYERTI-FPS-Config.xml</ConfigFileName>
+		<LoggingName>PAYERTI-FPS</LoggingName>
+		<StaticResponse StaticFolder="PAYERTI/FPS"/>
+		<Composer>MessageComposer</Composer>						
+	</LOB>	
+	<LOB>
+		<MessageClass name="HMRC-PAYE-RTI-EPS" eoy="false"/>
+		<ConfigFileName>PAYERTI-EPS-Config.xml</ConfigFileName>
+		<LoggingName>PAYERTI-EPS</LoggingName>
+		<StaticResponse StaticFolder="PAYERTI\EPS"/>
+		<Composer>MessageComposer</Composer>					
+	</LOB>	
+	<LOB>
+		<MessageClass name="HMRC-PAYE-RTI-NVR" eoy="false"/>
+		<ConfigFileName>PAYERTI-NVR-Config.xml</ConfigFileName>
+		<LoggingName>PAYERTI-NVR</LoggingName>
+		<StaticResponse StaticFolder="PAYERTI\NVR"/>
+		<Composer>MessageComposer</Composer>						
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-PAYE-RTI-EAS" eoy="false"/>
+		<ConfigFileName>PAYERTI-EAS-Config.xml</ConfigFileName>
+		<LoggingName>PAYERTI-EAS</LoggingName>
+		<StaticResponse StaticFolder="PAYERTI\EAS"/>
+		<Composer>MessageComposer</Composer>					
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-PAYE-RTI-EYU" eoy="false"/>
+		<ConfigFileName>PAYERTI-EYU-Config.xml</ConfigFileName>
+		<LoggingName>PAYERTI-EYU</LoggingName>
+		<StaticResponse StaticFolder="PAYERTI\EYU"/>
+		<Composer>MessageComposer</Composer>				
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-CHAR-CLM" eoy="false"/>
+		<ConfigFileName>CHARConfig.xml</ConfigFileName>
+		<LoggingName>Charity - CLM Single</LoggingName>
+		<StaticResponse StaticFolder="Charity"/>
+		<Composer>MessageComposer</Composer>					
+	</LOB>
+	<LOB>
+		<MessageClass name="HMRC-CHAR-CLM-MULTI" eoy="false"/>
+		<ConfigFileName>CHARConfig.xml</ConfigFileName>
+		<LoggingName>Charity - CLM Multi</LoggingName>
+		<StaticResponse StaticFolder="Charity"/>
+		<Composer>MessageComposer</Composer>					
+	</LOB>
+</LOBConfig>

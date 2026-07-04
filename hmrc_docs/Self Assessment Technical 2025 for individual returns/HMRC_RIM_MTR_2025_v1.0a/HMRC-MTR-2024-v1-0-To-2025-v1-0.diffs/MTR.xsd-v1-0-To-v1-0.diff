@@ -1,0 +1,300 @@
+@@
+ <?xml version="1.0" encoding="UTF-8"?>
+ 
+-<xsd:schema version='1.0' elementFormDefault='qualified' attributeFormDefault='unqualified' id='MTR' targetNamespace='http://www.govtalk.gov.uk/taxation/SA/SA100/23-24/1' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:MTR='http://www.govtalk.gov.uk/taxation/SA/SA100/23-24/1'>
++<xsd:schema version='1.0' elementFormDefault='qualified' attributeFormDefault='unqualified' id='MTR' targetNamespace='http://www.govtalk.gov.uk/taxation/SA/SA100/24-25/1' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:MTR='http://www.govtalk.gov.uk/taxation/SA/SA100/24-25/1'>
+   <xsd:annotation>
+     <xsd:appinfo>
+       <gms:Metadata xmlns:gms='http://www.govtalk.gov.uk/CM/gms-xs'>
+         <gms:Audience>e-service developers</gms:Audience>
+         <gms:Contributor>CoreFiling Ltd</gms:Contributor>
+         <gms:Coverage>
+           <gms:Spatial>UK</gms:Spatial>
+         </gms:Coverage>
+         <gms:Coverage>
+           <gms:Temporal>
+-            <gms:BeginningDate>2023-04-06</gms:BeginningDate>
+-            <gms:EndDate>2024-04-05</gms:EndDate>
++            <gms:BeginningDate>2024-04-06</gms:BeginningDate>
++            <gms:EndDate>2025-04-05</gms:EndDate>
+           </gms:Temporal>
+         </gms:Coverage>
+         <gms:Creator>HMRC</gms:Creator>
+         <gms:Date>
+           <gms:Created>2007-02-07</gms:Created>
+         </gms:Date>
+         <gms:Date>
+-          <gms:Modified>2023-10-03</gms:Modified>
++          <gms:Modified>2024-10-09</gms:Modified>
+         </gms:Date>
+         <gms:Identifier>MTR-1.0</gms:Identifier>
+         <gms:Language>[ISO 639-2/B] ENG</gms:Language>
+         <gms:Publisher>HMRC</gms:Publisher>
+         <gms:Relation>
+@@
+         </gms:Relation>
+         <gms:Relation>
+           <gms:ProvidesDefinitionOf>MTR_YesType</gms:ProvidesDefinitionOf>
+         </gms:Relation>
+         <gms:Rights>
+-          <gms:Copyright>(C) Crown Copyright 2001-2023</gms:Copyright>
++          <gms:Copyright>(C) Crown Copyright 2001-2024</gms:Copyright>
+         </gms:Rights>
+         <gms:Subject>Economics, Finance and Tax</gms:Subject>
+         <gms:Title>SA Main Tax Return Transaction Schema</gms:Title>
+         <gms:Type>message</gms:Type>
+       </gms:Metadata>
+@@
+                           <xsd:element name='OneOffGiftAidPayments' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='GiftAidPaymentsCarriedBackToPreviousYear' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='GiftAidPaymentsBroughtBackFromLaterYear' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='SharesGiftedToCharity' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='LandAndBuildingsGiftedToCharity' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                          <xsd:element name='InvestmentsGiftedToNonUKCharities' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                          <xsd:element name='DonationsToNonUKCharities' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                         </xsd:sequence>
+                       </xsd:complexType>
+                     </xsd:element>
+                     <xsd:element name='BlindPersonsAllowance' minOccurs='0' maxOccurs='1'>
+                       <xsd:complexType>
+@@
+                     </xsd:element>
+                     <xsd:element name='AmountOfPayrollGiving' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='PensionTaxAndLumpSums' minOccurs='0' maxOccurs='1'>
+                       <xsd:complexType>
+                         <xsd:sequence>
+-                          <xsd:element name='LumpSumPensionBenefitsInExcessOfALA' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                          <xsd:element name='NonlumpSumPensionBenefitsExceedingALA' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                          <xsd:element name='LifetimeAllowanceTaxPaid' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='AmountSavedExceedingAnnualAllowance' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='AnnualAllowanceTaxPaidByPensionScheme' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='PensionBenefitTransferredSubjectToOTC' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='TaxPaidByPensionSchemeOnOTC' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='PensionSchemeTaxRef' minOccurs='0' maxOccurs='1'>
+@@
+             <xsd:sequence>
+               <xsd:element name='Employment' minOccurs='1' maxOccurs='1'>
+                 <xsd:complexType>
+                   <xsd:sequence>
+                     <xsd:element name='PayFromEmployment' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='PayrolledBenefits' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TaxTakenOffPay' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TotalClass1NICableEarnings' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TipsAndOtherPayments' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='PensionContributionPaymentFromHMRC' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='EmployerPAYEReference' minOccurs='1' maxOccurs='1'>
+                       <xsd:simpleType>
+                         <xsd:restriction base='MTR:MTR_SAnonEmptyStringType'>
+                           <xsd:minLength value='1'></xsd:minLength>
+                           <xsd:maxLength value='17'></xsd:maxLength>
+@@
+                           <xsd:maxLength value='28'></xsd:maxLength>
+                         </xsd:restriction>
+                       </xsd:simpleType>
+                     </xsd:element>
+                     <xsd:element name='SalaryOrStipend' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='PayrolledBenefits' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TaxTakenOffSalaryStipend' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TotalClass1NICableEarnings' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='FeesAndOfferings' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='PensionContributionPaymentFromHMRC' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='VicarageManseExpenses' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='PersonalExpensesEtcPaid' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ExcessMileageAllowanceEtc' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='RoundSumExpensesAndRentAllowances' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TaxTakenOffRoundSumExpenses' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+@@
+                     <xsd:element name='ChangeOfBusinessDetails' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateBusinessStarted' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateBusinessCeased' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateAccountingPeriodStarts' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateAccountingPeriodEnds' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='CashBasis' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='ElectionToOptOutOfCashBasis' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
+                   </xsd:sequence>
+                 </xsd:complexType>
+               </xsd:element>
+               <xsd:element name='OtherInformation' minOccurs='0' maxOccurs='1'>
+                 <xsd:complexType>
+@@
+                     <xsd:element name='OwnGoodsAndServices' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AdditionsToNetProfitDeductionsFromNetLoss' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='NonTaxableBusinessIncome' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DeductionsFromNetProfitAdditionsToNetLoss' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='NetBusinessProfitLossForTax' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='DateBasisPeriodBegan' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='DateBasisPeriodEnded' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='BasisPeriodAdjustment' type='MTR:MTR_SAnonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='OverlapReliefNotPreviouslyDeducted' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='TaxYearAdjustment' type='MTR:MTR_SAnonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ChangeOfAccountingPracticeAdjustment' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AveragingAdjustment' type='MTR:MTR_SAnonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AdjustedProfitForTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='ProfitOrLossOfTheTransitionPart' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='OverlapReliefOfTheTransitionPart' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='SpreadTransitionProfitTreatedAsArising' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='SpreadTransitionProfitTreatedAsArising' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='LossBroughtForwardUsedAgainstSpreadTransitionProfit' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='LossBroughtForward' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AnyOtherBusinessIncome' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TotalTaxableBusinessProfits' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                   </xsd:sequence>
+@@
+                     <xsd:element name='ChangeOfBusinessDetails' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='FosterEtcCarerIndicator' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateBusinessStarted' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateBusinessCeased' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateBusinessBooksAreMadeUpTo' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='CashBasis' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='ElectionToOptOutOfCashBasis' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
+                   </xsd:sequence>
+                 </xsd:complexType>
+               </xsd:element>
+               <xsd:element name='BusinessIncome' minOccurs='0' maxOccurs='1'>
+                 <xsd:complexType>
+@@
+                         </xsd:restriction>
+                       </xsd:simpleType>
+                     </xsd:element>
+                     <xsd:element name='DateJoinedPartnership' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateLeftPartnership' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='CashBasis' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
+                   </xsd:sequence>
+                 </xsd:complexType>
+               </xsd:element>
+               <xsd:element name='ShareOfProfits' minOccurs='0' maxOccurs='1'>
+                 <xsd:complexType>
+                   <xsd:sequence>
+-                    <xsd:element name='DateBasisPeriodBegan' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='DateBasisPeriodEnded' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ShareOfPartnershipProfitOrLoss' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='AdjustmentForBasisPeriod' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='TaxYearAdjustment' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ChangeOfAccountingPracticeAdjustment' type='MTR:MTR_SAnonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AveragingAdjustment' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ForeignTaxClaimedAsDeduction' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='OverlapReliefNotPreviouslyDeducted' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AdjustedProfitForYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='ProfitOrLossOfTheTransitionPart' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='OverlapReliefOfTheTransitionPart' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='SpreadTransitionProfitTreatedAsArising' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='SpreadTransitionProfitTreatedAsArising' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='LossBroughtForwardUsedAgainstSpreadTransitionProfit' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='LossesBroughtForward' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TaxableProfitsAfterLosses' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='OtherBusinessIncome' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='TotalTaxableBusinessProfits' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+@@
+                                 <xsd:element name='TotalForeignTaxTakenOff' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                                 <xsd:element name='AdjustedForeignSavingsIncome' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                               </xsd:sequence>
+                             </xsd:complexType>
+                           </xsd:element>
+-                          <xsd:element name='OverlapReliefUsed' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='TotalUntaxedSavingsIncome' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                         </xsd:sequence>
+                       </xsd:complexType>
+                     </xsd:element>
+                     <xsd:element name='UKPropertyIncome' minOccurs='0' maxOccurs='1'>
+@@
+                           <xsd:element name='ResidentialFinanceCosts' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='UnusedResidentialFinanceCostsBroughtForward' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                         </xsd:sequence>
+                       </xsd:complexType>
+                     </xsd:element>
+-                    <xsd:element name='TotalUntaxedIncome' minOccurs='0' maxOccurs='1'>
+-                      <xsd:complexType>
+-                        <xsd:sequence>
+-                          <xsd:element name='TotalUntaxedIncome' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                          <xsd:element name='OverlapReliefSetOffAgainstTotalUntaxedIncome' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                          <xsd:element name='UnusedOverlapReliefSetOffAgainstOtherIncome' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                           <xsd:element name='TotalUntaxedIncomeShare' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                         </xsd:sequence>
+                       </xsd:complexType>
+                     </xsd:element>
+-                  </xsd:sequence>
+-                </xsd:complexType>
+-              </xsd:element>
+               <xsd:element name='ShareOfPartnershipIncome' minOccurs='0' maxOccurs='1'>
+                 <xsd:complexType>
+                   <xsd:sequence>
+                     <xsd:element name='ShareOfDividendIncome' minOccurs='0' maxOccurs='1'>
+                       <xsd:complexType>
+@@
+                         </xsd:restriction>
+                       </xsd:simpleType>
+                     </xsd:element>
+                     <xsd:element name='DateJoinedPartnership' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='DateLeftPartnership' type='MTR:MTR_SAMTRdateType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='CashBasis' type='MTR:MTR_YesType' minOccurs='0' maxOccurs='1'></xsd:element>
+                   </xsd:sequence>
+                 </xsd:complexType>
+               </xsd:element>
+               <xsd:element name='ShareOfPartnershipTradingOrProfessionalProfits' minOccurs='0' maxOccurs='1'>
+                 <xsd:complexType>
+                   <xsd:sequence>
+                     <xsd:element name='ShareOfPartnershipProfitOrLoss' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='TaxYearAdjustment' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ChangeOfAccountingPracticeAdjustment' type='MTR:MTR_SAnonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AveragingAdjustment' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ForeignTaxClaimedAsDeduction' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AdjustedProfitForYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='LossesBroughtForward' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+@@
+                         </xsd:restriction>
+                       </xsd:simpleType>
+                     </xsd:element>
+                     <xsd:element name='DisposalProceeds' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AllowableCosts' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='GainsInTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='GainsOnResidentialPropertyInTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='LossesInTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ClaimOrElectionMade' type='MTR:MTR_SACGTreliefCodeType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='GainOrLossFromUKpropertyDisposal' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='UKpropertyDisposalTaxAlreadyCharged' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='GainOrLossFromRTTreturn' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='RTTtaxAlreadyCharged' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+-                    <xsd:element name='CarriedInterest' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='CarriedInterestArisingBasis' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='CarriedInterestAccrualsBasis' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='GainsOnCarriedInterestInTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                  </xsd:sequence>
++                </xsd:complexType>
++              </xsd:element>
++              <xsd:element name='Cryptoassets' minOccurs='0' maxOccurs='1'>
++                <xsd:complexType>
++                  <xsd:sequence>
++                    <xsd:element name='NumberOfDisposals' minOccurs='0' maxOccurs='1'>
++                      <xsd:simpleType>
++                        <xsd:restriction base='xsd:positiveInteger'>
++                          <xsd:maxInclusive value='99999'></xsd:maxInclusive>
++                        </xsd:restriction>
++                      </xsd:simpleType>
++                    </xsd:element>
++                    <xsd:element name='DisposalProceeds' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='AllowableCosts' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='GainsInTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='LossesInTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='ClaimOrElectionMade' type='MTR:MTR_SACGTreliefCodeType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='GainFromRTTreturn' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='RTTtaxAlreadyCharged' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                   </xsd:sequence>
+                 </xsd:complexType>
+               </xsd:element>
+               <xsd:element name='OtherPropertyAssetsAndGains' minOccurs='0' maxOccurs='1'>
+                 <xsd:complexType>
+@@
+                       </xsd:simpleType>
+                     </xsd:element>
+                     <xsd:element name='DisposalProceeds' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AllowableCosts' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='GainsInTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='NonResidentialDisposalsIncludedInBox17' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='LandAndPropertyDisposalsWhereBADRisBeingClaimed' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='SharesDisposalsWhereBADRisBeingClaimed' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
++                    <xsd:element name='OtherDisposalsWhereBADRisBeingClaimed' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='AttributedGains' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='LossesInTheYear' type='MTR:MTR_SAnonNegativeMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='ClaimOrElectionMade' type='MTR:MTR_SACGTreliefCodeType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='GainFromRTTreturn' type='MTR:MTR_SAmonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>
+                     <xsd:element name='RTTtaxAlreadyCharged' type='MTR:MTR_SAnonNegativeNonZeroMonetaryType' minOccurs='0' maxOccurs='1'></xsd:element>

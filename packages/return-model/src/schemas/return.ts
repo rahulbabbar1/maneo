@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
 export const SA100Schema = z.object({
+  // Gross UK (domestic) investment income. Foreign equivalents live on SA106.
+  income: z.object({
+    ukSavingsIncome: z.number().int().nonnegative().default(0),   // gross interest, pence
+    ukDividendIncome: z.number().int().nonnegative().default(0),  // gross dividends, pence
+  }).optional(),
   taxAlreadyPaid: z.object({
     payeTax: z.number().int().nonnegative().default(0),
     taxDeductedFromSavings: z.number().int().nonnegative().default(0),

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MSGConfig>
+	<Data>
+		<MetaData key="HMRC-SA-SA100">HMRC-SA-SA100</MetaData>
+		<MetaData key="HMRC-SA-SA100-ATT">HMRC-SA-SA100-ATT</MetaData>
+		<MetaData key="HMRC-SA-SA100-TIL">HMRC-SA-SA100-TIL</MetaData>
+		<MetaData key="HMRC-SA-SA100-ATT-TIL">HMRC-SA-SA100-ATT-TIL</MetaData>
+		<MetaData key="HMRC-SA-SA800">HMRC-SA-SA800</MetaData>
+		<MetaData key="HMRC-SA-SA800-ATT">HMRC-SA-SA800-ATT</MetaData>
+		<MetaData key="HMRC-SA-SA800-TIL">HMRC-SA-SA800-TIL</MetaData>
+		<MetaData key="HMRC-SA-SA800-ATT-TIL">HMRC-SA-SA800-ATT-TIL</MetaData>
+		<MetaData key="HMRC-SA-SA900">HMRC-SA-SA900</MetaData>
+		<MetaData key="HMRC-SA-SA900-ATT">HMRC-SA-SA900-ATT</MetaData>
+		<MetaData key="HMRC-SA-SA900-TIL">HMRC-SA-SA900-TIL</MetaData>
+		<MetaData key="HMRC-SA-SA900-ATT-TIL">HMRC-SA-SA900-ATT-TIL</MetaData>
+		<MetaData key="IR-PAYE-MOV">IR-PAYE-MOV</MetaData>
+		<MetaData key="IR-PAYE-MOV-TIL">IR-PAYE-MOV-TIL</MetaData>
+		<MetaData key="HMRC-CT-CT600">HMRC-CT-CT600</MetaData>
+		<MetaData key="HMRC-VAT-DEC">HMRC-VAT-DEC</MetaData>
+		<!--<MetaData key="IR-PAYE-EOY">IR-PAYE-EOY</MetaData>
+		<MetaData key="IR-PAYE-P38A">IR-PAYE-P38A</MetaData>-->
+		<MetaData key="HMRC-PAYE-RTI-FPS">HMRC-PAYE-RTI-FPS</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-FPS-TIL">HMRC-PAYE-RTI-FPS-TIL</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-EPS">HMRC-PAYE-RTI-EPS</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-EPS-TIL">HMRC-PAYE-RTI-EPS-TIL</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-NVR">HMRC-PAYE-RTI-NVR</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-NVR-TIL">HMRC-PAYE-RTI-NVR-TIL</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-EAS">HMRC-PAYE-RTI-EAS</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-EAS-TIL">HMRC-PAYE-RTI-EAS-TIL</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-EYU">HMRC-PAYE-RTI-EYU</MetaData>
+		<MetaData key="HMRC-PAYE-RTI-EYU-TIL">HMRC-PAYE-RTI-EYU-TIL</MetaData>
+	</Data>
+</MSGConfig>

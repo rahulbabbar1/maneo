@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "https://eclipse.dev/jetty/configure_10_0.dtd">
+<!-- ##########################################################################
+
+This is the configuration file for the LTS Standalone application.
+
+It contains all of the configuration parameters that can be setup to make
+the configuration of this application specific to your local environment.
+
+Changes to this file should only be made to values tagged with the following:
+
+        ~~~ CONFIGURATION POINT: ~~~
+
+########################################################################### -->
+<!-- Configure the 'Jetty' web server -->
+<Configure id="jettyServer" class="org.eclipse.jetty.server.Server">
+	<!-- Configure a listener -->
+	<Call name="addConnector">
+		<Arg>
+			<New class="org.eclipse.jetty.server.ServerConnector">
+				<Arg>
+					<Ref id="jettyServer" />
+				</Arg>
+				<!-- Configure the System property from which to obtain the 'hostname'
+				value to use for the web server, and define the default value to use
+				if this property is not found at runtime -->
+				<Set name="host">
+					<!-- ~~~ CONFIGURATION POINT: web server hostname ~~~ -->
+					<SystemProperty name="service.listen.host" />
+				</Set>
+				<!-- Configure the System property from which to obtain the 'port' value
+				to use for the web server, and define the default value to use if this
+				property is not found at runtime -->
+				<Set name="port">
+					<!-- ~~~ CONFIGURATION POINT: web server port ~~~ -->
+					<SystemProperty name="service.listen.port" default="5665" />
+				</Set>
+			</New>
+		</Arg>
+	</Call>
+</Configure>

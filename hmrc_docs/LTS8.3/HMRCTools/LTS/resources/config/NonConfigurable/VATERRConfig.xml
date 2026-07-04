@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VATERRConfig>
+	<!--This is user configurable config data for the response messages and data needed to drive it-->
+	<Data>
+		<MetaData key="999123407">The VAT Period you have entered  [PeriodID] for the VRN 999123407 was not found, please check and resubmit if necessary.</MetaData>
+		<MetaData key="999123408">The VRN specified 999123408 was not found.</MetaData>
+		<MetaData key="999123409">A return has already been received for this period [PeriodID]</MetaData>
+	</Data>
+</VATERRConfig>

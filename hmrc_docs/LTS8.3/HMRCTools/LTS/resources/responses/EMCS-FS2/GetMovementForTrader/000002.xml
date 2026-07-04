@@ -1,0 +1,22 @@
+<GetMovementForTraderResponse xmlns="http://www.govtalk.gov.uk/taxation/EMCS/GetMovementForTraderResponse/3">
+<MovementForTraderDataResponse xmlns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/MovementForTraderData/3" xmlns:ie="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE3:IE934:V1.51" xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE3:TMS:V1.51" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<ie:IE934>
+		<ie:Header>
+				<tms:MessageSender>token</tms:MessageSender>
+				<tms:MessageRecipient>token</tms:MessageRecipient>
+				<tms:DateOfPreparation>1967-08-13</tms:DateOfPreparation>
+				<tms:TimeOfPreparation>14:20:00</tms:TimeOfPreparation>
+				<tms:MessageIdentifier>token</tms:MessageIdentifier>
+				<tms:CorrelationIdentifier>token</tms:CorrelationIdentifier>
+		</ie:Header>
+		<ie:Body>
+			<ie:MessagePackage>
+				<ie:MessageBody>
+					<ie:TechnicalMessageType>CD801</ie:TechnicalMessageType>
+					<ie:MessageData>UjBsR09EbGhjZ0dTQUxNQUFBUUNBRU1tQ1p0dU1GUXhEUzhi</ie:MessageData>
+				</ie:MessageBody>
+			</ie:MessagePackage>
+		</ie:Body>
+	</ie:IE934>
+</MovementForTraderDataResponse>
+</GetMovementForTraderResponse>

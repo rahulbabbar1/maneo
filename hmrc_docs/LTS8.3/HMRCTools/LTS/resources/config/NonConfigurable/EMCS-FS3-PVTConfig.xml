@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PVTConfig>
+  <!--logging level range from 0 - 8. 1=SEVERE, 8=All, 0=OFF-->
+  <logginglevel>8</logginglevel>
+  <logfile>logs\\logs.txt</logfile>
+	<Identity>
+		<ServiceMessageType>HMRC-EMCS-PVT-DIRECT</ServiceMessageType>
+		<EnvelopeNamespace>http://www.govtalk.gov.uk/CM/envelope</EnvelopeNamespace>
+		<MessageNamespace>http://www.govtalk.gov.uk/taxation/PreValidateTrader/1</MessageNamespace>
+	</Identity> 
+	<Handlers>
+	    <Handler ExitOnError="false">uk.gov.hmrc.aspire.lts.requesthandlers.NamespaceAwareMetaDataHandler</Handler>
+	    <Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.AuthenticationHandler</Handler>
+	    <Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.ValidationHandler</Handler>
+	    <Handler ExitOnError="false">uk.gov.hmrc.aspire.lts.requesthandlers.DownloadHandler</Handler>	      
+	</Handlers>
+	
+	<Data>	
+		<NameSpaces>
+			<NameSpace key="tns">http://www.w3.org/2003/05/soap-envelope</NameSpace>
+			<NameSpace key="wsse">http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd</NameSpace>
+			<NameSpace key="pvt">http://www.govtalk.gov.uk/taxation/PreValidateTrader/1</NameSpace>
+		</NameSpaces>
+		<MetaData key="MessageClass">/tns:Envelope/tns:GovTalkMessage/tns:Header/tns:MessageDetails/tns:Class</MetaData>
+		<MetaData key="GatewayTimestamp">/tns:Envelope/tns:GovTalkMessage/tns:Header/tns:MessageDetails/tns:GatewayTimestamp</MetaData>
+		<MetaData key="Username">/tns:Envelope/tns:Header/wsse:Security/wsse:UsernameToken/wsse:Username</MetaData>
+		<MetaData key="IR_HMRC_Mark">/tns:Envelope/tns:Header/wsse:Security/wsse:BinarySecurityToken</MetaData>	
+	</Data>
+</PVTConfig>

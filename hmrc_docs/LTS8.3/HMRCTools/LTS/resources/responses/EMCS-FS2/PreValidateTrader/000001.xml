@@ -1,0 +1,27 @@
+<PreValidateTraderResponse xmlns="http://www.govtalk.gov.uk/taxation/EMCS/PreValidateTraderResponse/1">
+<tns:ExciseTraderValidationResponse xmlns:tns="http://www.govtalk.gov.uk/taxation/EMCS/ExciseTraderValidationResponse" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<tns:ExciseTraderResponse exciseID="GBTCA45678901" validTrader="true">
+		<tns:ValidateDateTimeStamp>2001-12-17T09:30:47.00</tns:ValidateDateTimeStamp>
+		<tns:ValidateProductAuthorisationResult>
+			<tns:Products>
+				<tns:Product>
+					<tns:ExciseProductCode>W200</tns:ExciseProductCode>
+					<tns:Valid>true</tns:Valid>
+				</tns:Product>
+				<tns:Product>
+					<tns:ExciseProductCode>W201</tns:ExciseProductCode>
+					<tns:Valid>true</tns:Valid>
+				</tns:Product>
+				<tns:Product>
+					<tns:ExciseProductCode>W202</tns:ExciseProductCode>
+					<tns:Valid>true</tns:Valid>
+				</tns:Product>
+				<tns:Product>
+					<tns:ExciseProductCode>W203</tns:ExciseProductCode>
+					<tns:Valid>true</tns:Valid>
+				</tns:Product>
+			</tns:Products>
+		</tns:ValidateProductAuthorisationResult>
+	</tns:ExciseTraderResponse>
+</tns:ExciseTraderValidationResponse>
+</PreValidateTraderResponse>

@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7809</Number>
+		<Type>business</Type>
+		<Text>This submission cannot be accepted as the date of submission is after 19 April following the tax year to which it relates</Text>
+		<Location></Location>
+</Error>

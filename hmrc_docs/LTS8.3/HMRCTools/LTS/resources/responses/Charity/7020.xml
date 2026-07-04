@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7020</Number>
+		<Type>business</Type>
+		<Text>Agent/Nominee details do not match those of the enrolled Agent/Nominee.</Text>
+		<Location></Location>
+</Error>

@@ -1,0 +1,112 @@
+td
+{
+	font:0.80em arial,sans-serif;
+}
+
+option
+{
+	font:0.80em arial,sans-serif;
+}
+
+legend
+{
+	font:1em arial,sans-serif;
+}
+
+fieldset
+{
+	float : left;
+	width : 75%;
+	margin : 0 1em 0 0;
+	padding : 0; /*1em*/
+	border : 1px solid green;
+	color:green;
+}
+
+.row1 
+{
+	background-color: #ffefb5;
+	
+}
+
+.row2 
+{
+	background-color: #fff7ce;
+	
+}
+
+.tableRollOverEffect1
+{
+background-color:#bddece;
+color:#FFF;
+}
+
+.tableRollOverEffect2
+{
+background-color:#000;
+color:#FFF;
+}
+
+a.next
+{
+  font:1.0em arial,sans-serif;
+  font-weight:bold;
+  text-decoration:none;
+  background:url(../images/arrowRightCircle.gif) no-repeat right center;
+  padding-right:1.5em;
+  color:#096;
+}
+
+table.ex
+{
+color:red;
+background-color:green;
+font-size: 100%;
+padding:2px;
+}
+
+
+
+.submit
+{
+   color:#050;
+   font-family:'trebuchet ms',helvetica,sans-serif;
+   font-size:84%;
+   font-weight:bold;
+   background-color:#fed;
+   border:1px solid;
+   border-top-color:#696;
+   border-left-color:#696;
+   border-right-color:#363;
+   border-bottom-color:#363;
+   filter:progid:DXImageTransform.Microsoft.Gradient
+      (GradientType=0,StartColorStr='#ffffffff',EndColorStr='#ffeeddaa');
+}
+
+
+.template
+{
+ 
+ font-style: italic;
+}
+.scenerio
+{
+ 
+ font-style: oblique;
+}
+.obligation
+{
+ 
+ font-style: normal;
+}
+.other
+{
+
+font-style: normal;
+}
+
+.page_header
+{
+	text-align: left;
+	font:1em arial,sans-serif;
+}

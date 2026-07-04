@@ -1,0 +1,14 @@
+<GetMovementForTraderResponse xmlns="http://www.govtalk.gov.uk/taxation/EMCS/GetMovementForTraderResponse/3">
+	<ErrorResponse xmlns="http://www.govtalk.gov.uk/CM/errorresponse" SchemaVersion="2.0">
+		<Application>
+			<MessageCount>1</MessageCount>
+		</Application>
+		<Error>
+			<RaisedBy>ChRIS</RaisedBy>
+			<Number>8902</Number>
+			<Type>business</Type>
+			<Text>Movement Not Found</Text>
+			<Location>GetAllEventMessagesForMovement</Location>
+		</Error>
+	</ErrorResponse>
+</GetMovementForTraderResponse>

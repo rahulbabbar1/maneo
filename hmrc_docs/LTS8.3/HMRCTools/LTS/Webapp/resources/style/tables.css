@@ -1,0 +1,56 @@
+/* Defaults */
+
+div.portlet-body table thead tr th
+{
+  padding:0;
+  font-size:0.8em;
+  font-weight:bold;
+  text-align:left;
+  color:#096;
+}
+
+table thead tr th,
+table tbody tr td
+{
+  padding:.25em .5em .25em 0;
+  vertical-align:top;
+}
+
+table thead tr th a
+{
+  text-decoration:underline; /* Opera */
+}
+
+table thead tr th a img
+{
+  vertical-align:middle;
+  padding-top:1px;
+  padding-left:.5em;
+}
+
+
+
+/* Underlines style */
+
+table.underlines tr th,
+table.underlines tbody tr td
+{
+  border-bottom:1px solid #CCC;
+}
+
+
+
+/* Summary style */
+
+table.summary tbody tr td a
+{
+  padding-left:1em;
+  background:url(../images/arrowRightGreen.gif) no-repeat 0 .3em;
+  display:block;
+  text-decoration:none;
+}
+
+table.summary caption
+{
+  text-align:left;
+}

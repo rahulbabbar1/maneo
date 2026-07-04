@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VATPNConfig>
+	<!--This is user configurable config data for the response messages and data needed to drive it-->
+	<Data>
+		<MetaData key="999123401">The tax due as declared on this return [Value of tax due] will be debited from your bank account on 2009-01-01.  If you have submitted this VAT Return on behalf of the VAT Registered entity, you must print this acknowledgement and present to the account holder / authorised signatory of the account prior to the stated Direct Debit collection date.
+		</MetaData>
+		<MetaData key="999123402">The tax due as declared on this return [Value of tax due] will be debited from your bank account on 2009-01-01.  If you have submitted this VAT Return on behalf of the VAT Registered entity, you must print this acknowledgement and present to the account holder / authorised signatory of the account prior to the stated Direct Debit collection date.
+		</MetaData>
+		<MetaData key="999123403">Any tax due must be paid electronically and received by HM Revenue &amp; Customs by 2009-01-01. Payment should be made electronically, by Bankers Automated Clearing Services (BACS), Bank Giro Credit Transfer or by Clearing House Automated Payment System (CHAPS). You must use the VAT Registration number as a reference on your payment.  Sort code, Account number and Account Name can be found on the HMRC web site. http://www.hmrc.gov.uk/payinghmrc/bank-account-checker.htm 
+		</MetaData>
+		<MetaData key="999123404">Any tax due must be paid electronically and received by HM Revenue &amp; Customs by 2009-01-01. Payment should be made electronically, by Bankers Automated Clearing Services (BACS), Bank Giro Credit Transfer or by Clearing House Automated Payment System (CHAPS). You must use the VAT Registration number as a reference on your payment.  Sort code, Account number and Account Name can be found on the HMRC web site. http://www.hmrc.gov.uk/payinghmrc/bank-account-checker.htm
+		</MetaData>
+		<MetaData key="999123405">We are aware that you have submitted a Direct Debit Instruction, but this will not come into effect in time to collect the current liability. Any tax due must be paid by an alternative electronic method (Bankers Automated Clearing Services (BACS), Bank Giro Credit Transfer or by Clearing House Automated Payment System (CHAPS)) and received by HM Revenue &amp; Customs by 2009-01-01. You must use the VAT Registration number as a reference on your payment.  Sort code, Account number and Account Name can be found on the HMRC web site. http://www.hmrc.gov.uk/payinghmrc/bank-account-checker.htm 
+		</MetaData>
+		<MetaData key="999123406">We are aware that you have submitted a Direct Debit Instruction, but this will not come into effect in time to collect the current liability. Any tax due must be paid by an alternative electronic method (Bankers Automated Clearing Services (BACS), Bank Giro Credit Transfer or by Clearing House Automated Payment System (CHAPS)) and received by HM Revenue &amp; Customs by 2009-01-01. You must use the VAT Registration number as a reference on your payment.  Sort code, Account number and Account Name can be found on the HMRC web site. http://www.hmrc.gov.uk/payinghmrc/bank-account-checker.htm 
+		</MetaData>
+		<MetaData key="999123410">The tax due as declared on this return [Value of tax due] will be debited from your bank account on 2009-01-01.  If you have submitted this VAT Return on behalf of the VAT Registered entity, you must print this acknowledgement and present to the account holder / authorised signatory of the account prior to the stated Direct Debit collection date.
+		</MetaData>
+		<MetaData key="999123411">Any tax due must be paid electronically and received by HM Revenue &amp; Customs immediately. Payment should be made electronically, by Bankers Automated Clearing Services (BACS), Bank Giro Credit Transfer or by Clearing House Automated Payment System (CHAPS). You must use the VAT Registration number as a reference on your payment.  Sort code, Account number and Account Name can be found on the HMRC web site. http://www.hmrc.gov.uk/payinghmrc/bank-account-checker.htm
+		</MetaData>
+		<MetaData key="999123412">We are aware that you have submitted a Direct Debit Instruction, but this will not come into effect in time to collect the current liability.
+Any tax due must be paid electronically and received by HM Revenue &amp; Customs immediately. Payment should be made electronically, by Bankers Automated Clearing Services (BACS), Bank Giro Credit Transfer or by Clearing House Automated Payment System (CHAPS). You must use the VAT Registration number as a reference on your payment.  Sort code, Account number and Account Name can be found on the HMRC web site. http://www.hmrc.gov.uk/payinghmrc/bank-account-checker.htm
+		</MetaData>
+		<MetaData key="999123413">This is a repayment return. No payment is due.
+		</MetaData>
+		<MetaData key="999123414">This is a nil return. No payment is due.
+		</MetaData>
+		<MetaData key="999123415">The net amount of VAT on your return (box 5) results in a payment or repayment amount of less than £1. Please note that this return will be processed onto your VAT record but HMRC will not require payment or make repayment of any amount less than £1.
+		</MetaData>
+		<MetaData key="999123416">The tax due as declared on this return [Value of tax due] will be debited from your bank account on 2009-01-01.  If you have submitted this VAT Return on behalf of the VAT Registered entity, you must print this acknowledgement and present to the account holder / authorised signatory of the account prior to the stated Direct Debit collection date.
+		</MetaData>
+		<MetaData key="999123417">The tax due as declared on this return [Value of tax due] will be debited from your bank account on 2009-01-01  If you have submitted this VAT Return on behalf of the VAT Registered entity, you must print this acknowledgement and present to the account holder / authorised signatory of the account prior to the stated Direct Debit collection date.
+		</MetaData>
+	</Data>
+</VATPNConfig>

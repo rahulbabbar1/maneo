@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+	<RaisedBy>ChRIS</RaisedBy>
+	<Number>7801</Number>
+	<Type>business</Type>
+	<Text>Accounts Office reference or Employer PAYE reference is incorrect</Text>
+	<Location></Location>
+</Error>

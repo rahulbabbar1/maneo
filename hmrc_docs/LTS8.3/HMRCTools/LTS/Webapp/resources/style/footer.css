@@ -1,0 +1,29 @@
+/* Footer */
+
+ul#footer
+{
+  text-align:center;
+  clear:both;
+  margin-top:.6em; /* IE6 */
+  padding-bottom:.5em;
+}
+
+ul#footer li.first
+{
+  padding:0;
+  border:0;
+  margin:0;
+}
+
+ul#footer li
+{
+  display:inline;
+  padding-left:1.25em;
+  border-left:1px solid #000;
+  margin-left:1em;
+}
+
+ul#footer li a
+{
+  color:#000;
+}

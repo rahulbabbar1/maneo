@@ -1,0 +1,390 @@
+Based on'HMRC-RIM-MTR-2026-v1-1' of the Individual RIM artefacts.
+
+Version 1.0 Changes since 2024-25
+
+SA100
+=====
+
+* YTR4.4B - Box removed
+
+* YTR8.8A - Box removed and new box added
+
+* WFHP1 - Box added and box grouping moved
+
+SA101
+=====
+
+* AOI15 - Validation updated
+
+SA102
+=====
+
+* EMP3.1 - Box removed
+
+* EMP7 - Description and type changed
+
+* EMP7.1 - Box added
+
+* EMP7.2 - Box added
+
+* EMP7.3 - Box added
+
+* EMP7.4 - Box added
+
+* MOR4.1 - Box removed
+
+* MOR12 - Mandatory if added and value validation changed
+
+
+SA103F
+=====
+
+* FSE6Q - Box added
+
+* FSE6 - Mandatory if added
+
+* FSE7Q - Box added
+
+* FSE7 - Mandatory if added
+
+* FSE60-76.1 - External ID changed
+
+* FSE76.1 - Box added
+
+* FSE77.1 - Box added
+
+* FSE78 - Prohibited if added
+
+* FSE79 - Prohibited if added
+
+SA103S
+=====
+
+* SSE5Q - Box added
+
+* SSE5 - Mandatory if added
+
+* SSE6Q - Box added
+
+* SSE6 - Mandatory if added
+
+SA104F
+=====
+
+* FPS3Q - Box added
+
+* FPS3 - Mandatory if added
+
+* FPS4Q - Box added
+
+* FPS4 - Mandatory if added
+
+* FPS8-20.1 - External ID changed
+
+* FPS20.1 - Box added
+
+* FPS21.1 - Box added
+
+* FPS22 - Prohibited if added
+
+* FPS23 - Prohibited if added
+
+* FPS28-35.1 - External ID changed
+
+* FPS35.1 - Box added
+
+* FPS42 - Box removed
+
+* FPS43 - Box removed
+
+* FPS44 - Box removed
+
+* FPS52-55.1 - External ID changed
+
+* FPS55.1 - Box added
+
+* FPS60.1 - Box added
+
+* FPS67 - Mandatory if added and value validation changed
+
+* FPS68-75.1 - External ID changed
+
+* FPS70.1 - Box added
+
+* FPS75.1 - Box added
+
+* FPS76.1 - Box added
+
+SA104S
+=====
+
+* SPS3Q - Box added
+
+* SPS3 - Mandatory if added
+
+* SPS4Q - Box added
+
+* SPS4 - Mandatory if added
+
+SA105
+=====
+
+* PRO5-19 - Group removed
+
+* PRO20 - Description changed
+
+* PRO20.1 - Validation removed
+
+* PRO31 - Validation changed
+
+* PRO34 - Box removed
+
+* PRO38 - Mandatory if changed and if present changed
+
+* PRO41 - Mandatory if changed and if present changed
+
+SA106
+=====
+
+* FOR4.1 - Box added
+
+* FOR6.1 - Box added
+
+* FOR7.2A-FOR7.2F - Group removed and new group added
+
+* FOR7.2A - Box added
+
+* FOR7.2B - Box added
+
+* FOR7.2C - Box added
+
+* FOR7.2D (pseudo) - Box added
+
+* FOR7.2E - Box added
+
+* FOR7.2F (pseudo) - Box added
+
+* FOR7.1 - Box removed and new box added
+
+* FOR7.2 - Box removed and new box added
+
+* FOR9.1 - Box added 
+
+* FOR11.1 - Box added
+
+* FOR13.0 - Box added
+
+* FOR22 - Box removed
+
+* FOR24 - Mandatory if changed and value validation changed
+
+* FOR30.1 - Box added
+
+* FOR43-FOR64.1 - External ID changed
+
+* FOR41 - Box removed
+
+* FOR42 - Box removed
+
+* FOR48A-FOR48F - Group added
+
+* FOR48A - Box added
+
+* FOR48B - Box added
+
+* FOR48C - Box added
+
+* FOR48D (pseudo) - Box added
+
+* FOR48E - Box added
+
+* FOR48F (pseudo) - Box added
+
+* FOR47 - Box added
+
+* FOR48 - Box added
+
+* FOR48.1 - Box added
+
+* FOR49 - Box added
+
+* FOR49.1 - Box added
+
+* FOR51A-FOR51F - Group added
+
+* FOR51A - Box added
+
+* FOR51B - Box added
+
+* FOR51C - Box added
+
+* FOR51D (pseudo) - Box added
+
+* FOR51E - Box added
+
+* FOR51F (pseudo) - Box added
+
+* FOR50 - Box added
+
+* FOR51 - Box added
+
+* FOR51.1 - Box added
+
+* FOR53A-FOR53F -Group added
+
+* FOR53A - Box added
+
+* FOR53B - Box added
+
+* FOR53C - Box added
+
+* FOR53D (pseudo) - Box added
+
+* FOR53E - Box added
+
+* FOR53F (pseudo) - Box added
+
+* FOR52 - Box added
+
+* FOR53 - Box added
+
+* FOR53.1 - Box added
+
+* FOR54 - Box added
+
+* FOR54.1 - Box added
+
+* FOR55 - Box added 
+
+* FOR55.1 - Box added
+
+* FOR56 - Box added
+
+* FOR56.1 - Box added
+
+* FOR57 - Box added
+
+* FOR57.1 - Box added
+
+* FOR58 - Box added
+
+* FOR58.1 - Box added
+
+* FOR59 - Box added
+
+* FOR59.1 - Box added
+
+* FOR60 - Box added
+
+* FOR60.1 - Box added
+
+* FOR61 - Box added
+
+* FOR61.1 - Box added
+
+* FOR62 - Box added
+
+* FOR62.1 - Box added
+
+* FOR63 - Box added
+
+* FOR63.1 - Box added
+
+* FOR64 - Box added
+
+* FOR64.1 - Box added
+
+SA107
+=====
+
+* TRU22.1 - Box added
+
+
+SA108
+=====
+
+* CGT3-13C - External ID changed
+
+* CGT6.1 - Box added
+
+* CGT13C - Box added
+
+* CGT17.0 - Box added
+
+* CGT18 - Box removed
+
+* CGT26.1 - Box added
+
+* CGT34.1 - Box added
+
+* CGT52EG.1 - Box added
+
+* CGT52QG.1 - Box added
+
+
+SA109
+=====
+
+* SA109 - Description changed
+
+* NRD2 - Box removed
+
+* NRD5 - Box removed
+
+* NRD23-27 - Group removed
+
+* NRD23-24 - Group added
+
+* NRD23 - Box added
+
+* NRD24 - Box added
+
+* NRD28-39.1 - Group removed
+
+* NRD28-30 - Group added
+
+* NRD28 - Box added
+
+* NRD29 - Box added
+
+* NRD30 - Box added
+
+* NRD37-39 - Group added
+
+* NRD37 - Position changed
+
+* NRD38 - Position changed
+
+* NRD38A - Position changed, type changed, validation removed, validation added and if present added
+
+* NRD39 - Position changed
+
+* NRD40-49 - Group added
+
+* NRD40 - Box removed and new box added
+
+* NRD41 - Box added
+
+* NRD43 - Box added
+
+* NRD44 - Box added
+
+* NRD46 - Box added
+
+* NRD47 - Box added
+
+* NRD48 - Box added
+
+* NRD49 - Box added
+
+* NRD50-53 - Group added
+
+* NRD50 - Box added
+
+* NRD51 - Box added
+
+* NRD52 - Box added
+
+* NRD53 - Box added
+
+* NRD54 - Box added

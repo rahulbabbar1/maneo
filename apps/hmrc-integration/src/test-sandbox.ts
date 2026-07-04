@@ -2,6 +2,11 @@ import { buildLegacySaXml, calculateIRmark } from './xml.js';
 import { assembleFraudHeaders, ClientBrowserHeaders } from './services/fraud-headers-assembler.js';
 import { Return } from '@uk-sa-app/return-model';
 
+// Fraud-header assembly now requires a server-held licence secret (was hardcoded).
+// Provide a throwaway value for the sandbox test run only.
+process.env.HMRC_VENDOR_LICENSE_SECRET =
+  process.env.HMRC_VENDOR_LICENSE_SECRET || 'sandbox-test-secret';
+
 function runSandboxFilingTest() {
   console.log('Starting Sandbox XML Filing & IRmark Tests...');
 

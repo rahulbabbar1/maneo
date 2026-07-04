@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7813</Number>
+		<Type>business</Type>
+		<Text>This NINO Verification Request cannot be accepted because there is a cessation date on this employer reference</Text>
+		<Location></Location>
+</Error>

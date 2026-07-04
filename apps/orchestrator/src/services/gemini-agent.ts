@@ -1,9 +1,10 @@
-import { VertexAI, FunctionDeclaration, SchemaType, Tool } from '@google-cloud/vertexai';
+import { VertexAI, FunctionDeclaration, SchemaType } from '@google-cloud/vertexai';
 import { computeIncomeTax, computeFullReturn } from '@uk-sa-app/tax-core';
 import { getConfig, CONFIGS } from '@uk-sa-app/tax-config';
 import { Return } from '@uk-sa-app/return-model';
 import { PromptBuilder } from './prompt-builder.js';
 import { StateMachine, PhaseKey } from './state-machine.js';
+import { enforceFigureGuardrail } from './guardrail.js';
 
 // ─── Tool Declarations ───────────────────────────────────────────────────────
 
@@ -42,10 +43,17 @@ const computeFullReturnDeclaration: FunctionDeclaration = {
   },
 };
 
-// Google Search grounding tool — gives the agent live HMRC guidance access
-const googleSearchTool: Tool = {
-  googleSearch: {},
-} as any;
+// Data residency: model calls must stay in an approved UK/EU region (spec 9.3).
+const APPROVED_REGION_PREFIXES = ['europe-', 'eu'];
+function assertApprovedRegion(region: string) {
+  const ok = APPROVED_REGION_PREFIXES.some(p => region.startsWith(p));
+  if (!ok) {
+    throw new Error(
+      `Refusing to initialise Vertex AI in non-EU/UK region "${region}". ` +
+      `Set GCP_REGION to an approved region (e.g. europe-west2).`
+    );
+  }
+}
 
 // ─── GeminiAgent ─────────────────────────────────────────────────────────────
 
@@ -56,9 +64,13 @@ export class GeminiAgent {
   constructor(project: string, region: string, currentPhase?: PhaseKey) {
     this.stateMachine = new StateMachine(currentPhase);
     try {
-      this.vertexAI = new VertexAI({ project, location: 'us-central1' });
-    } catch (e) {
-      console.warn('Vertex AI failed to initialize. Running in fallback mode.');
+      assertApprovedRegion(region);
+      // Use the injected, region-pinned location — never a hardcoded US region.
+      this.vertexAI = new VertexAI({ project, location: region });
+    } catch (e: any) {
+      // Fail closed: no non-compliant fallback. AI is simply unavailable.
+      console.error('Vertex AI initialisation failed:', e?.message || e);
+      this.vertexAI = null;
     }
   }
 
@@ -137,9 +149,11 @@ export class GeminiAgent {
             model = this.vertexAI.getGenerativeModel({
               model: m,
               generationConfig: {
-                maxOutputTokens: 8192,  // Pro supports larger context windows
+                maxOutputTokens: 8192,
                 temperature:     0.4,
               },
+              // Deterministic posture: calculation tools only. No web/search
+              // grounding — the model must not source tax rules from the web.
               tools: [{ functionDeclarations: [computeIncomeTaxDeclaration, computeFullReturnDeclaration] }],
             });
             modelName = m;
@@ -202,11 +216,20 @@ export class GeminiAgent {
 
       } catch (err: any) {
         console.error('[Vertex AI Error]', err.message);
-        replyText = await this.runAIStudioFallback(message, systemPrompt, history, returnObj);
+        // Fail closed. Do NOT route return data to any non-ZDR endpoint.
+        replyText = 'The AI assistant is temporarily unavailable. Your tax computation is still running — see the computation panel on the left.';
       }
     } else {
-      replyText = await this.runAIStudioFallback(message, systemPrompt, history, returnObj);
+      replyText = 'The AI assistant is not configured for this environment. Your tax computation is still running — see the computation panel on the left.';
     }
+
+    // Fabrication guardrail (spec 6.2): strip any monetary figure the model
+    // produced that does not trace to a calculation-tool result.
+    const guarded = enforceFigureGuardrail(replyText, latestCalc, config);
+    if (guarded.redacted) {
+      console.warn('[Guardrail] Redacted unverified monetary figure(s) from model reply.');
+    }
+    replyText = guarded.text;
 
     // Update phase state machine
     const nextPhase = this.stateMachine.determineNextPhase(message, replyText);
@@ -219,73 +242,5 @@ export class GeminiAgent {
       phase:       this.stateMachine.getCurrentPhase(),
       calculation: latestCalc,
     };
-  }
-
-  // ── AI Studio fallback (no function calling, but still useful) ───────────
-
-  private async runAIStudioFallback(
-    message: string,
-    systemPrompt: string,
-    history: any[],
-    returnObj?: Return
-  ): Promise<string> {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return 'The AI service is temporarily unavailable. Your local tax computation is still running — check the panel on the left.';
-    }
-
-    try {
-      console.log('[AI Fallback] Using Google AI Studio (gemini-2.5-flash)...');
-
-      const contents = [
-        ...history.map(h => ({
-          role:  h.role === 'model' ? 'model' : 'user',
-          parts: h.parts.map((p: any) => ({ text: p.text || '' })),
-        })),
-        { role: 'user', parts: [{ text: message }] },
-      ];
-
-      const STUDIO_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'];
-      let lastError = '';
-      for (const studioModel of STUDIO_MODELS) {
-        try {
-          console.log(`[AI Fallback] Trying ${studioModel} via AI Studio...`);
-          const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${studioModel}:generateContent?key=${apiKey}`,
-            {
-              method:  'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents,
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig:  { temperature: 0.4, maxOutputTokens: 8192 },
-                tools: [{ googleSearch: {} }],
-              }),
-            }
-          );
-
-          if (!response.ok) {
-            const errText = await response.text();
-            lastError = `${studioModel}: ${response.statusText} — ${errText}`;
-            console.warn(`[AI Studio] ${lastError}`);
-            continue;
-          }
-
-          const data = await response.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            console.log(`[AI Studio] Success with ${studioModel}`);
-            return text;
-          }
-        } catch (err: any) {
-          lastError = err.message;
-          console.error(`[AI Studio] ${studioModel} error:`, err.message);
-        }
-      }
-      throw new Error(lastError || 'All AI Studio models failed');
-    } catch (err: any) {
-      console.error('[AI Studio Fallback Error]', err.message);
-      return `The AI service encountered an error: ${err.message}. Please try again or contact support.`;
-    }
   }
 }

@@ -1,0 +1,47 @@
+/* Header */
+
+div#header
+{
+  background:#096;
+  text-align:right;
+  color:#fff;
+  float:left;
+  width:100%;
+}
+
+div#header a img
+{
+  float:left;
+}
+
+div#header-title
+{
+  font-size:2.0em;
+  margin-right:.4em;
+  margin-top:.25em;
+}
+
+div#header ul
+{
+  margin-top:.5em;
+  margin-bottom:.5em;
+  font-size:.9em;
+}
+
+div#header ul li.first a
+{
+  border-left:0;
+}
+
+div#header ul li
+{
+  display:inline;
+}
+
+div#header ul li a
+{
+  color:#fff!important;
+  font-weight:bold;
+  border-left:1px solid #fff;
+  padding:0 1em 0 1.3em;
+}

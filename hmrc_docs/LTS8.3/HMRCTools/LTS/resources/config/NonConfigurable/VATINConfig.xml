@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VATINConfig>
+	<!--This is user configurable config data for the response messages and data needed to drive it-->
+	<Data>
+		<MetaData key="999123402">We do not have your current address. If you have moved, please use the 'Change registration details' online service to notify HM Revenue &amp; Customs of your new address. Alternatively, if you have not moved and think you have received this message in error; please use the ‘Other amendments’ section within the 'Change registration details' online service to tell HMRC you haven't moved.
+We will not be able to issue any repayments that may be due to you until we receive confirmation of your address.
+		</MetaData>
+		<MetaData key="999123404">We do not have your current address. If you have moved, please use the 'Change registration details' online service to notify HM Revenue &amp; Customs of your new address. Alternatively, if you have not moved and think you have received this message in error; please use the ‘Other amendments’ section within the 'Change registration details' online service to tell HMRC you haven't moved.
+We will not be able to issue any repayments that may be due to you until we receive confirmation of your address.
+		</MetaData>
+		<MetaData key="999123406">We do not have your current address. If you have moved, please use the 'Change registration details' online service to notify HM Revenue &amp; Customs of your new address. Alternatively, if you have not moved and think you have received this message in error; please use the ‘Other amendments’ section within the 'Change registration details' online service to tell HMRC you haven't moved.
+We will not be able to issue any repayments that may be due to you until we receive confirmation of your address.
+		</MetaData>
+		<MetaData key="999123416">As you have entered an amount in Box 8 you will be required to complete a VAT 101 EC Sales List. You will receive a paper copy through the post but please note it is also available online.
+		</MetaData>
+	</Data>
+</VATINConfig>

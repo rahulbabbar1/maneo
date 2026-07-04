@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PAYE_EoYConfig>
+  <!--logging level range from 0 - 8. 1=SEVERE, 8=All, 0=OFF-->
+  <logginglevel>8</logginglevel>
+  <logfile>logs\\logs.txt</logfile>
+	<Identity>
+		<ServiceMessageType>IR-PAYE-EOY</ServiceMessageType>
+		<EnvelopeNamespace>http://www.govtalk.gov.uk/CM/envelope</EnvelopeNamespace>
+		<LowerWindowBoundary>2004</LowerWindowBoundary>
+	</Identity>
+	<Handlers>
+	    <Handler ExitOnError="false">uk.gov.hmrc.aspire.lts.requesthandlers.MetaDataHandler</Handler>
+   	    <Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.DecompressionHandler</Handler>
+	    <Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.PAYEEoYValidationHandler</Handler>
+	    <Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.PAYEDownloadHandler</Handler>	    
+	</Handlers>
+	<!-- Configuration used by the MetaDataHandler -->
+	<Data>
+		<MetaData key="MessageClass">/GovTalkMessage/Header/MessageDetails/Class</MetaData>
+		<MetaData key="IR_HMRC_Mark">/GovTalkMessage/Body/IRenvelope/IRheader/IRmark</MetaData>
+		<MetaData key="SystemTimestamp">/GovTalkMessage/GovTalkDetails/ChannelRouting/Timestamp</MetaData>
+		<MetaData key="Credential">/GovTalkMessage/GovTalkDetails/Keys/Key</MetaData>
+		<MetaData key="PeriodEnd">/GovTalkMessage/Body/IRenvelope/IRheader/PeriodEnd</MetaData>
+		<MetaData key="SubmissionType">/GovTalkMessage/Body/IRenvelope/EndOfYearReturn/SubmissionType</MetaData>
+		<MetaData key="EmployerName">/GovTalkMessage/Body/IRenvelope/EndOfYearReturn/P35/EmployerDetails/EmployerName</MetaData>
+		<MetaData key="EmployerName1">/GovTalkMessage/Body/IRenvelope/EndOfYearReturn/P35Amended/EmployerDetails/EmployerName</MetaData>
+		<MetaData key="isPaper">/EricEnvelope/MessageHeader/Routing/CaptureMethod/Paper/ProFormaFlag</MetaData>
+		
+	</Data>
+	<!-- Configuration used by the DecompressionHandler -->
+	<Decompression>
+		<!-- Full XPath pointing to the element containing the compressed data -->
+		<CompressedPartXPath>/GovTalkMessage/Body/IRenvelope/EndOfYearReturn/CompressedPart</CompressedPartXPath>
+		<!-- Name of the attribute, on the 'compressed part' element, which defines the type of compression that was used to compress the data -->
+		<CompressionTypeAttributeName>Type</CompressionTypeAttributeName>
+	</Decompression>
+</PAYE_EoYConfig>

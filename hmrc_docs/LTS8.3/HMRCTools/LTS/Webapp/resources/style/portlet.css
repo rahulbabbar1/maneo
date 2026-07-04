@@ -1,0 +1,93 @@
+/* Portlet */
+
+div.portlet
+{
+  background:url(../images/border.gif) repeat-y right;
+  margin-left:1.5em;
+  clear:both;
+}
+
+div.portlet div.portlet-header
+{
+  background:#efe url(../images/border.gif) repeat-x top;
+}
+
+div.portlet div.portlet-header h2
+{
+  background:url(../images/corner.gif) no-repeat top right;
+  font-size:1.05em;
+  color:#063;
+  padding:.25em;
+  padding-left:.25em;
+  position:relative;
+}
+
+div.portlet div.portlet-header h2 img
+{
+  position:absolute;
+  right:.8em;
+  top:.4em;
+}
+
+div.portlet div.portlet-body
+{
+  background:url(../images/border.gif) repeat-y right;
+  float:left;
+  width:100%;
+  border-bottom:2em solid #fff; /* Opera 7.51 */
+  padding-top:.5em;
+}
+
+div.portlet div.portlet-body *
+{
+  margin-left:.25em;
+  margin-right:.5em;
+}
+
+div.portlet div.portlet-body * *
+{
+  margin-left:0;
+  margin-right:0;
+}
+
+
+
+/* No title bar variation */
+
+div.portlet.no-title-bar div.portlet-header
+{
+  background:url(../images/border.gif) repeat-x top;
+  margin-bottom:-.6em;
+}
+
+div.portlet.no-title-bar div.portlet-body
+{
+  padding-top:0;
+}
+
+div.portlet.no-title-bar div.portlet-body *
+{
+  margin-right:25em;
+}
+
+div.portlet.no-title-bar div.portlet-body * *
+{
+  margin-right:0;
+}
+
+
+
+/* Portlet Breadcrumb */
+
+div.portlet div.portlet-body div.breadcrumb a
+{
+  background:url(../images/arrowRightGreen.gif) no-repeat 0 .3em;
+  padding-left:1em;
+  padding-right:1em;
+  text-decoration:none;
+}
+
+div.portlet div.portlet-body div.breadcrumb
+{
+  margin-bottom:2em;
+}

@@ -1,0 +1,35 @@
+/* Styles for printing. */
+
+/* Accomplish a page width that will fit on an A4 sheet as printed by a standard desktop printer. */
+body
+{
+  width:100%;
+}
+
+/* Remove all non-essential images and large blocks of background colour not required for an adequate understanding of the page content. */
+*
+{
+  background:none !important;
+  color:#000;
+}
+
+/* Remove all page navigation elements. */
+div#header ul,
+ul#site-breadcrumb,
+div.menu-column,
+div.portlet div.portlet-header h2 img,
+ul#footer
+{
+  display:none;
+  border:0;
+}
+
+/* Make use of space created by removing the menu. */
+div.column.page-column
+{
+  width:100%;
+}
+div#banner h1
+{
+  margin-left:2.75% !important;
+}

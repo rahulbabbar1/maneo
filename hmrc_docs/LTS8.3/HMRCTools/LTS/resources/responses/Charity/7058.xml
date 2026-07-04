@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7058</Number>
+		<Type>business</Type>
+		<Text>Maximum number of donations within the submission exceeded</Text>
+		<Location></Location>
+</Error>

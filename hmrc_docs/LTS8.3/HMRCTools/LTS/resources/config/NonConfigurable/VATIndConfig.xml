@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VATIndConfig>
+	<!--This is user configurable config data for the response messages and data needed to drive it-->
+	<Data>
+		<MetaData key="999123401">3</MetaData>
+		<MetaData key="999123402">3</MetaData>
+		<MetaData key="999123403">4</MetaData>
+		<MetaData key="999123404">4</MetaData>
+		<MetaData key="999123405">4</MetaData>
+		<MetaData key="999123406">4</MetaData>
+		<MetaData key="999123410">3</MetaData>
+		<MetaData key="999123411">4</MetaData>
+		<MetaData key="999123412">4</MetaData>
+		<MetaData key="999123413">2</MetaData>
+		<MetaData key="999123414">1</MetaData>
+		<MetaData key="999123415">1</MetaData>
+		<MetaData key="999123416">3</MetaData>
+		<MetaData key="999123417">3</MetaData>
+	</Data>
+</VATIndConfig>

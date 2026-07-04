@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7814</Number>
+		<Type>business</Type>
+		<Text>This Employer Alignment Submission has been successfully received and will overwrite previous submissions with the same unique part identifier</Text>
+		<Location></Location>
+</Error>

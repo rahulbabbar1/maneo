@@ -1,0 +1,260 @@
+/* Defaults */
+
+div.portlet-body ul
+{
+  margin:1em .25em;
+  height:100%; /* IE */
+}
+
+div.portlet-body ul li,
+div.portlet-body ul.no-marker li li
+{
+  background:url(../images/arrowRightGreen.gif) no-repeat 0 .3em;
+  padding-left:1em;
+}
+
+div.portlet-body ul li.new-section
+{
+  clear:both;
+  margin-top:1em;
+}
+
+
+
+/* Portlet Navigation */
+
+ul.portlet-navigation li
+{
+  padding-left:1em;
+  background:url(../images/arrowRightGreen.gif) no-repeat 0 .3em;
+  float:right;
+  margin-right:.5em;
+}
+
+
+
+/* Settings */
+
+dl.settings dd
+{
+  margin-top:.5em;
+  margin-bottom:.5em;
+  font-weight:bold;
+}
+
+
+
+/* A-to-Z lists */
+
+div.portlet-body ul.a-to-z
+{
+  text-align:center;
+}
+
+div.portlet-body ul.a-to-z li.first
+{
+  border-left:0;
+}
+
+div.portlet-body ul.a-to-z li
+{
+  display:inline;
+  background:none;
+  border-left:1px solid #000;
+  padding-left:.33em;
+}
+
+
+
+/* Page Navigation */
+
+div.portlet-body ul.page-navigation
+{
+  text-align:center;
+  font-weight:bold;
+  padding-top:1em;
+}
+
+div.portlet-body ul.page-navigation a
+{
+  font-weight:normal;
+}
+
+div.portlet-body ul.page-navigation li.previous,
+div.portlet-body ul.page-navigation li.first,
+div.portlet-body ul.page-navigation li.next
+{
+  border-left:0;
+}
+
+div.portlet-body ul.page-navigation li.previous
+{
+  background:url(../images/chevronLeft.gif) no-repeat left;
+  padding-left:.75em;
+}
+
+div.portlet-body ul.page-navigation li.first,
+div.portlet-body ul.page-navigation li.next
+{
+  padding-left:1.5em;
+}
+
+div.portlet-body ul.page-navigation li
+{
+  background:none;
+  display:inline;
+  border-left:1px solid #000;
+  padding-left:.33em;
+}
+
+div.portlet-body ul.page-navigation li.next
+{
+  border-left:0;
+  background:url(../images/chevronRight.gif) no-repeat right;
+  padding-right:.75em;
+}
+
+
+
+/* Ruled */
+
+div.portlet-body ul.ruled li.first
+{
+  border-top:1px solid #ccc;
+}
+
+div.portlet-body ul.ruled li * li.first
+{
+  border-top:0;
+}
+
+div.portlet-body ul.ruled li
+{
+  border-bottom:1px solid #ccc;
+  padding-top:.5em;
+  padding-bottom:.5em;
+  background-position: 0 .8em;
+  clear:left;
+}
+
+div.portlet-body ul.ruled li * li
+{
+  border-bottom:0;
+  padding-top:0;
+  padding-bottom:0;
+  background-position: 0 .3em;
+}
+
+
+
+/* Inner List Navigation */
+
+div.portlet-body ul li ul.inner-list-navigation li.first
+{
+  border-left:0;
+  margin-left:0;
+}
+
+div.portlet-body ul li ul.inner-list-navigation li
+{
+  border-left:1px solid #000;
+  margin-left:.5em;
+  display:inline;
+  background:none;
+}
+
+
+
+/* No Marker */
+
+div.portlet-body ul.no-marker li
+{
+  background:none;
+  padding-left:0;
+}
+
+
+
+/* Inline Definition List */
+
+dl.inline dt
+{
+  float:left;
+}
+
+
+
+/* Gutter left list */
+
+ul.gutter-left
+{
+  padding-left:1em;
+}
+
+
+
+/* Catalogue style */
+
+ul.catalogue li.product
+{
+  float:left;
+  width:98%;
+}
+
+ul.catalogue li.product dl
+{
+  float:left;
+  width:72.5%;
+}
+
+ul.catalogue li.product dl.narrow
+{
+  width:68%;
+}
+
+ul.catalogue li.product dl dt.name a
+{
+  font-weight:bold;
+}
+
+ul.catalogue li.product dl dd.info dl.known-facts,
+ul.catalogue li.product dl dd.info dl.known-facts dt
+{
+  float:left;
+  margin-right:.5em;
+}
+
+ul.catalogue li.product dl dd.info dl.known-facts
+{
+  word-wrap:normal;
+}
+
+ul.catalogue li.product ul.options
+{
+  margin:0 -2px 0 1em; /* IE */
+  float:right;
+  width:25%;
+}
+
+
+
+/* Choices */
+div.portlet-body ul.choices
+{
+  float:right;
+  padding-right:1em;
+}
+
+div.portlet-body ul.choices li.first
+{
+  border-left:none;
+  color:red;
+}
+
+div.portlet-body ul.choices li
+{
+  background:none;
+  display:inline;
+  border-left:1px solid #000;
+  margin-left:.66em;
+}

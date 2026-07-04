@@ -1,0 +1,28 @@
+<GetNewMessagesResponse xmlns="http://www.govtalk.gov.uk/taxation/EMCS/GetNewMessagesResponse/3">
+	<NewMessagesDataResponse xmlns="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/NewMessagesData/3" xmlns:ie="http://www.govtalk.gov.uk/taxation/InternationalTrade/Excise/ie704uk/3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tms="urn:publicid:-:EC:DGTAXUD:EMCS:PHASE4:TMS:V3.13">
+		<Messages>
+			<ie:IE704>
+				<ie:Header>
+					<tms:MessageSender>SEED.EC</tms:MessageSender>
+					<tms:MessageRecipient>SEED.EC</tms:MessageRecipient>
+					<tms:DateOfPreparation>1967-08-13</tms:DateOfPreparation>
+					<tms:TimeOfPreparation>14:20:00</tms:TimeOfPreparation>
+					<tms:MessageIdentifier>token</tms:MessageIdentifier>
+					<tms:CorrelationIdentifier>token</tms:CorrelationIdentifier>
+				</ie:Header>
+				<ie:Body>
+					<ie:GenericRefusalMessage>
+						<ie:Attributes>
+							<ie:AdministrativeReferenceCode>00AA00000000000000009</ie:AdministrativeReferenceCode>
+						</ie:Attributes>
+						<ie:FunctionalError>
+							<ie:ErrorType>4401</ie:ErrorType>
+							<ie:ErrorReason>token</ie:ErrorReason>
+						</ie:FunctionalError>
+					</ie:GenericRefusalMessage>
+				</ie:Body>
+			</ie:IE704>
+		</Messages>
+		<CountOfMessagesAvailable>1</CountOfMessagesAvailable>
+	</NewMessagesDataResponse>
+</GetNewMessagesResponse>

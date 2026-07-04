@@ -1,0 +1,25 @@
+AcknowledgeMessagesReceipt:
+8901 - Authentication failed
+
+GetMovementForTrader:
+8901 - Authentication failed
+000001 - Movement ARC does not exist.
+000002 - Movement found.
+000003 - Movement found (where multiple versions exist).
+
+GetNewMessages:
+8901 - Authentication failed
+000001 - No Messages found for this trader.
+000002 - Messages found (where there are no more messages to download).
+000003 - Messages found (where there are more messages to download).
+000004 - ie704 response for ie818
+000005 - ie704 response for ie837
+
+SubmitExplainDelayToDelivery:
+8901 - Authentication failed
+
+SubmitReportofReceipt:
+8901 - Authentication failed
+
+SubmitReasonForShortage:
+8901 - Authentication failed

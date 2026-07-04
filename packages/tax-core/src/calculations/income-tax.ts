@@ -8,6 +8,8 @@ export interface ComputeIncomeTaxInput {
   giftAidGrossedUp: number; // pence
   relievablePensionContributions: number; // pence
   blindPersonsAllowanceClaimed: boolean;
+  marriageAllowanceTransferor?: boolean; // gives away part of PA
+  marriageAllowanceRecipient?: boolean;  // receives a tax reducer
 }
 
 export interface ComputedTaxBandResult {
@@ -19,17 +21,19 @@ export interface ComputedTaxBandResult {
 }
 
 export interface ComputeIncomeTaxOutput {
-  personalAllowance: number;      // pence
+  personalAllowance: number;      // pence (after taper and any marriage transfer)
   taxableNonSavings: number;      // pence
   taxableSavings: number;         // pence
-  taxableDividends: number;        // pence
+  taxableDividends: number;       // pence
   allocatedBands: ComputedTaxBandResult[];
-  incomeTaxTotal: number;         // pence
+  marriageAllowanceReducer: number; // pence, subtracted from the total
+  incomeTaxTotal: number;         // pence (after marriage-allowance reducer)
 }
 
 /**
- * Calculates the personal allowance after applying any taper.
- * Taper reduces the allowance by £1 for every £2 of income over £100,000.
+ * Personal allowance after the £1-for-£2 taper over the taper limit.
+ * (Marriage-allowance transfer and blind person's allowance are applied by the
+ * caller, computeIncomeTax, so this stays a pure taper function.)
  */
 export function computePersonalAllowance(
   adjustedNetIncome: number,
@@ -52,12 +56,11 @@ export function computePersonalAllowance(
 }
 
 /**
- * Allocates taxable income to the relevant tax bands in order of:
- * 1. Non-savings income
- * 2. Savings income
- * 3. Dividend income
- * 
- * Note: Gift aid and relievable pensions extend the basic-rate and higher-rate bands.
+ * Income tax with correct band STACKING: non-savings, then savings, then
+ * dividends are placed on a single shared band cursor, so savings/dividends are
+ * taxed at the taxpayer's marginal position rather than each restarting from the
+ * basic-rate band. 0%-rate allowances (starting rate for savings, PSA, dividend
+ * allowance) still consume band space, matching HMRC.
  */
 export function computeIncomeTax(
   input: ComputeIncomeTaxInput,
@@ -71,136 +74,125 @@ export function computeIncomeTax(
     giftAidGrossedUp,
     relievablePensionContributions,
     blindPersonsAllowanceClaimed,
+    marriageAllowanceTransferor = false,
+    marriageAllowanceRecipient = false,
   } = input;
 
-  // 1. Calculate Adjusted Net Income for personal allowance taper
-  // Adjusted net income is total taxable income before personal allowance, minus grossed up gift aid / pension
+  // 1. Adjusted net income for the taper (net of grossed-up gift aid / pension).
   const totalGrossIncome = nonSavingsIncome + savingsIncome + dividendIncome;
   const reliefExtension = giftAidGrossedUp + relievablePensionContributions;
   const adjustedNetIncome = Math.max(0, totalGrossIncome - reliefExtension);
 
-  // 2. Compute Personal Allowance
-  const personalAllowance = computePersonalAllowance(adjustedNetIncome, config, blindPersonsAllowanceClaimed);
+  // 2. Personal allowance, then apply marriage-allowance transfer if giving away.
+  let personalAllowance = computePersonalAllowance(adjustedNetIncome, config, blindPersonsAllowanceClaimed);
+  if (marriageAllowanceTransferor) {
+    personalAllowance = Math.max(0, personalAllowance - config.marriageAllowanceTransferLimit);
+  }
 
-  // 3. Deduct Personal Allowance from income categories (precedence: non-savings, then savings, then dividends)
+  // 3. Deduct PA against categories in precedence order.
   let remainingPA = personalAllowance;
 
   let taxableNonSavings = 0;
-  if (nonSavingsIncome > remainingPA) {
-    taxableNonSavings = nonSavingsIncome - remainingPA;
-    remainingPA = 0;
-  } else {
-    remainingPA -= nonSavingsIncome;
-  }
+  if (nonSavingsIncome > remainingPA) { taxableNonSavings = nonSavingsIncome - remainingPA; remainingPA = 0; }
+  else { remainingPA -= nonSavingsIncome; }
 
   let taxableSavings = 0;
-  if (savingsIncome > remainingPA) {
-    taxableSavings = savingsIncome - remainingPA;
-    remainingPA = 0;
-  } else {
-    remainingPA -= savingsIncome;
-  }
+  if (savingsIncome > remainingPA) { taxableSavings = savingsIncome - remainingPA; remainingPA = 0; }
+  else { remainingPA -= savingsIncome; }
 
   let taxableDividends = 0;
-  if (dividendIncome > remainingPA) {
-    taxableDividends = dividendIncome - remainingPA;
-    remainingPA = 0;
-  } else {
-    remainingPA -= dividendIncome;
-  }
+  if (dividendIncome > remainingPA) { taxableDividends = dividendIncome - remainingPA; remainingPA = 0; }
+  else { remainingPA -= dividendIncome; }
 
-  // 4. Band Allocation
+  // 4. Band allocation on a SHARED cursor.
   const rates = config.incomeTax[region] || config.incomeTax.rUK;
+  const bandOffset = reliefExtension; // gift aid / pension extend the finite bands
   const allocatedBands: ComputedTaxBandResult[] = [];
   let incomeTaxTotal = 0;
 
-  // Band extensions from reliefs (increases the size of basic and higher rate bands)
-  const bandOffset = reliefExtension;
+  // `cursor` = cumulative taxable income already placed into bands (all categories).
+  let cursor = 0;
 
-  // A helper function to allocate income into bands
-  const allocateToBands = (
+  const upperOf = (band: TaxBand) =>
+    band.limit === Infinity ? Infinity : band.limit + bandOffset;
+
+  // Allocate `amount` across `bands` starting at the current cursor position.
+  const allocate = (
     amount: number,
     category: 'nonSavings' | 'savings' | 'dividends',
     bands: TaxBand[]
   ) => {
-    let remainingAmount = amount;
-    let accumulatedLimit = 0;
-
+    let remaining = amount;
     for (const band of bands) {
-      if (remainingAmount <= 0) break;
-
-      // Adjust band limit based on relief extensions
-      const rawLimit = band.limit;
-      const adjustedLimit = rawLimit === Infinity ? Infinity : rawLimit + bandOffset;
-      const bandWidth = adjustedLimit - accumulatedLimit;
-
-      const allocatedToThisBand = Math.min(remainingAmount, bandWidth);
-      if (allocatedToThisBand > 0) {
-        const taxCharged = Math.round(allocatedToThisBand * band.rate);
-        allocatedBands.push({
-          name: band.name,
-          category,
-          amountAllocated: allocatedToThisBand,
-          rate: band.rate,
-          taxCharged,
-        });
-        incomeTaxTotal += taxCharged;
-        remainingAmount -= allocatedToThisBand;
-      }
-
-      accumulatedLimit = adjustedLimit;
+      if (remaining <= 0) break;
+      const upper = upperOf(band);
+      if (cursor >= upper) continue; // band already consumed by lower income
+      const space = upper - cursor;
+      const take = Math.min(remaining, space);
+      if (take <= 0) continue;
+      const taxCharged = Math.round(take * band.rate);
+      allocatedBands.push({ name: band.name, category, amountAllocated: take, rate: band.rate, taxCharged });
+      incomeTaxTotal += taxCharged;
+      remaining -= take;
+      cursor += take;
     }
   };
 
-  // Allocating Non-Savings
-  allocateToBands(taxableNonSavings, 'nonSavings', rates.nonSavings);
+  // Place a 0%-rate allowance that still consumes band space at the cursor.
+  const allocateZeroRate = (
+    amount: number,
+    category: 'nonSavings' | 'savings' | 'dividends',
+    name: string
+  ) => {
+    if (amount <= 0) return;
+    allocatedBands.push({ name, category, amountAllocated: amount, rate: 0, taxCharged: 0 });
+    cursor += amount;
+  };
 
-  // Allocating Savings (simplified for skeleton: starting rate and PSA are handled in full implementation)
-  // Let's deduct Personal Savings Allowance (PSA)
-  let actualTaxableSavings = taxableSavings;
-  // If basic rate: PSA is £1,000, if higher: £500, if additional: £0
-  // Determine tax band category based on adjusted net income
-  let psa = 0;
-  const basicRateMax = rates.nonSavings[0].limit + bandOffset;
-  const higherRateMax = rates.nonSavings[1].limit + bandOffset;
-  if (adjustedNetIncome <= basicRateMax + personalAllowance) {
-    psa = config.personalSavingsAllowanceBasic;
-  } else if (adjustedNetIncome <= higherRateMax + personalAllowance) {
-    psa = config.personalSavingsAllowanceHigher;
-  } else {
-    psa = config.personalSavingsAllowanceAdditional;
+  // 4a. Non-savings.
+  allocate(taxableNonSavings, 'nonSavings', rates.nonSavings);
+
+  // 4b. Savings: starting rate for savings, then PSA, then normal bands.
+  let remainingSavings = taxableSavings;
+
+  // Starting rate band (£5,000) is reduced £-for-£ by taxable non-savings income.
+  const startingRateRoom = Math.max(0, config.savingsStartingRateLimit - taxableNonSavings);
+  const startingAmount = Math.min(remainingSavings, startingRateRoom);
+  allocateZeroRate(startingAmount, 'savings', 'savings_starting_rate');
+  remainingSavings -= startingAmount;
+
+  // PSA tier is determined by UK-wide thresholds regardless of region.
+  const ukBands = config.incomeTax.rUK.nonSavings;
+  const ukBasicUpper = ukBands[0].limit + bandOffset;
+  const ukHigherUpper = ukBands[1].limit + bandOffset;
+  const totalTaxable = taxableNonSavings + taxableSavings + taxableDividends;
+  let psa: number;
+  if (totalTaxable <= ukBasicUpper) psa = config.personalSavingsAllowanceBasic;
+  else if (totalTaxable <= ukHigherUpper) psa = config.personalSavingsAllowanceHigher;
+  else psa = config.personalSavingsAllowanceAdditional;
+
+  const psaAmount = Math.min(remainingSavings, psa);
+  allocateZeroRate(psaAmount, 'savings', 'personal_savings_allowance');
+  remainingSavings -= psaAmount;
+
+  allocate(remainingSavings, 'savings', rates.savings);
+
+  // 4c. Dividends: dividend allowance (0%), then normal dividend bands.
+  let remainingDividends = taxableDividends;
+  const divAllowanceAmount = Math.min(remainingDividends, config.dividendAllowance);
+  allocateZeroRate(divAllowanceAmount, 'dividends', 'dividend_allowance');
+  remainingDividends -= divAllowanceAmount;
+
+  allocate(remainingDividends, 'dividends', rates.dividends);
+
+  // 5. Marriage-allowance recipient tax reducer: 20% of the transferable amount,
+  //    capped at the tax otherwise due (it cannot create a refund).
+  let marriageAllowanceReducer = 0;
+  if (marriageAllowanceRecipient) {
+    const reducer = Math.round(config.marriageAllowanceTransferLimit * 0.20);
+    marriageAllowanceReducer = Math.min(incomeTaxTotal, reducer);
+    incomeTaxTotal -= marriageAllowanceReducer;
   }
-
-  if (psa > 0 && actualTaxableSavings > 0) {
-    const allocatedPsa = Math.min(actualTaxableSavings, psa);
-    allocatedBands.push({
-      name: 'personal_savings_allowance',
-      category: 'savings',
-      amountAllocated: allocatedPsa,
-      rate: 0.00,
-      taxCharged: 0,
-    });
-    actualTaxableSavings -= allocatedPsa;
-  }
-
-  allocateToBands(actualTaxableSavings, 'savings', rates.savings);
-
-  // Allocating Dividends (deduct dividend allowance)
-  let actualTaxableDividends = taxableDividends;
-  const divAllowance = config.dividendAllowance;
-  if (divAllowance > 0 && actualTaxableDividends > 0) {
-    const allocatedDivAllowance = Math.min(actualTaxableDividends, divAllowance);
-    allocatedBands.push({
-      name: 'dividend_allowance',
-      category: 'dividends',
-      amountAllocated: allocatedDivAllowance,
-      rate: 0.00,
-      taxCharged: 0,
-    });
-    actualTaxableDividends -= allocatedDivAllowance;
-  }
-
-  allocateToBands(actualTaxableDividends, 'dividends', rates.dividends);
 
   return {
     personalAllowance,
@@ -208,6 +200,7 @@ export function computeIncomeTax(
     taxableSavings,
     taxableDividends,
     allocatedBands,
+    marriageAllowanceReducer,
     incomeTaxTotal,
   };
 }

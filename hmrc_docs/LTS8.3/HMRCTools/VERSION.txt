@@ -1,0 +1,389 @@
+v8.3    January 2025
+
+a) EIS TS2 EIS_25143 PR015039 REQ016802 CBP, ODS, OTRSA and ChRIS including Corefiling
+b) Calc_20251208
+---------------------------------------------------------
+
+v8.2    November 2025
+
+a) EIS_25088 v2 PR014926 POLICY - COTAX 2026 New Tax Year Changes
+b) Calc_20251015
+---------------------------------------------------------
+v8.1    August 2025
+
+a) EIS TS2 EIS_24160 PR014136 REQ012276 SA 24-25/ veraion V1.1 for SA900
+b) Calc_20250304
+---------------------------------------------------------
+v8.0    April 2025
+
+a) Updates to support Java 21 LTS release
+b) GSL Schematron Validator version update to 1.80
+---------------------------------------------------------
+v7.0    November 2024
+
+a) EIS TS2 EIS_24160 PR014136 REQ012276 SA 24-25
+---------------------------------------------------------
+v6.9    February 2024
+
+a) PR011197 EMCS TFE FS4
+---------------------------------------------------------
+v6.8    November 2023
+
+a) EIS TS2 EIS_23119 PR013239 REQ007126 SA 23-24 
+---------------------------------------------------------
+
+v6.7    February 2023
+
+a) EIS TS2 PR010563 EIS_6522 CR004 2023 COTAX Changes Post
+---------------------------------------------------------
+v6.5 	December 2022
+
+a)PR011606 SA NTY 22-23 AIC100690 (year on year changes).
+
+-----------------------------------------------------
+v6.4 	July 2022
+
+a)PR011173 AIC049131 Decommissioning of TPVS PAYE EOY-LTS
+
+-----------------------------------------------------
+v6.3 	March 2022
+
+a) New rules in CT - 2022 
+b) Updated GSL Validator to v1.79
+--------------------------------------------------
+v6.2 	December 2021
+
+a) New Calculator - 2021-12-08
+b) New SA - Year on year changes - 2021/2022 update
+---------------------------------------------------
+v6.1 	October 2021
+
+a) Introduced RTI level 3 validation 7816 and 7817 for EPS
+-------------------------------------------------------------
+v6.0 	December 2020
+
+a) New Calculator - 2020-12-09
+b) New SA - Year on year changes - 2020/2021 update
+---------------------------------------------------
+v5.9	February 2020
+
+a) Updated Configuration Namespaces for EMCS  FS3.4 messages
+b) ReName MGD001 to FS3.4
+------------------------------------------------------------
+v5.8 	November 2019
+
+a) New Calculator - 2019-10-24
+b) New SA - Year on year changes - 2019/2020 update
+
+---------------------------------------------------
+v5.7 	November 2018
+
+a) New Calculator - 2018-10-24
+b) Schematron version update 1.77
+c) New SA - Year on year changes - 2018/2019 update
+
+----------------------------------------------
+v5.6	September 2018
+
+a) Updated Configuration Namespaces for EMCS  MGD001 messages
+
+----------------------------------------------
+v5.5	January 2018
+
+a) Updated Configuration Namespaces for EMCS messages
+b) ReName FS3.2 to FS3.3
+
+-----------------------------------------------
+v5.4	November 2016
+
+a) New Calculator - 2016-10-19
+b) Schematron version update 1.74
+c) Update all Copyright screen dates
+
+------------------------
+
+v5.3	November 2015
+
+a) Updated Configuration Namespaces for EMCS messages
+b) ReName FS3.1 to FS3.2
+3) Update the Front end screens date from 2014 to 2015
+
+------------------------
+
+v5.2	November 2014
+
+a) New Calculator - 2014-10-15
+b) New Charities - Now supports two versions.
+c) New SA - Year on year changes - 2014/2015 update
+d) Schematron version update from 1.70 to 1.72
+
+------------------------
+
+V5.1	October 2014
+
+a) Added support for v4.0 of the CT600 for Unified Rates
+
+------------------------
+
+V5.0	September 2014
+
+a) Upgraded to Java version 1.7.0_51
+
+------------------------
+
+V4.4	September 2013
+
+a) Include the Charity ref/Agent id in the success response message
+b) Add new RTI 'static' Response messages for EAS,EYU,FPS,EPS,NVR
+c) Change RTI multiple compressed parts error code & message to '4065' instead of '6010'
+d) EMCS FS3.1
+
+------------------------
+
+V4.3	February 2013
+
+a) Fix to correct issues with Charities Agent/Nominee submissions
+------------------------
+
+V4.2	February 2013
+
+a) Updated decompression functionality
+b) Updated PAYE EOY GSL Validator to v13.2
+c) Updated Schematron Validator to v1.64
+------------------------
+
+V4.1	November 2012
+
+a) Added support for Charity messages
+
+------------------------
+
+V4.0	Sept 2012
+
+a) Updated PAYE EOY GSL Validator to v13.0
+b) Support multi-member compression
+c) Updated Schematron Validator to v1.63
+d) Add <Transformation> and <SenderDetails> elements
+e) Fix to correct error responses for compression errors
+f) Changes to RTI/Paye for new message and Responses
+
+------------------------
+
+V3.13	July 2012
+
+a) EMCS FS2.1
+b) Remove Redundant FS0 and FS1 infrastructure processing
+------------------------
+
+V3.12	May 2012
+
+a) Changes to the org.eclipse.emf.* packages versions in the RunLTSStandalone.bat & .sh files
+
+------------------------
+
+V3.11	February 2012
+
+a) Added support for compressed submissions for PAYE EOY and PAYE RTI
+b) Updated PAYE EOY GSL Validator to v11.33
+c) Updated Schematron Validator to v1.59
+d) Improved memory management regarding submission data handling
+e) Display a different Submission Success message for TPVS/TIL messages
+f) Use UTF-8 for the validator output, to improve handling of special characters
+g) Only allow a Zip default value, if no type attribute exists
+h) update a number of EMCS-specific files that are packaged within the LTS
+
+------------------------
+
+V3.10	November 2011
+
+a) RTI TIL messages registered
+b) Minor bug fixes
+c) Updated Schematron Validator to v1.56
+d) Update to the "Installation Guide.doc" - FAQ section
+
+------------------------
+
+V3.9	August 2011
+
+a) Fixed bug regarding 'large' EMCS split submissions
+b) New PAYE End Of Year (EOY) validator (v11.28) for 2012-2013
+c) Updates to the "Installation Guide.doc" (OXG screenshot to include new RTINOT tab. SDST telephone number change)
+
+------------------------
+
+V3.8	May 2011
+
+a) EMCS FS2
+b) EMCS namespace awareness
+
+------------------------
+
+V3.7	Feb 2011
+
+a) CT 3.6 Calculator Update
+b) JSP Firefox fix
+
+------------------------
+
+V3.6	October 2010
+
+a) New ECMS FS1 rules
+b) CT v3.4.1 rules and new calculator
+
+------------------------
+
+V3.5	October 2010
+
+a) Integration of PAYE End of Year Validation
+
+------------------------
+
+V3.4	July 2010
+
+a) Updated GSL Validator to v1.50
+
+--------------------
+
+V3.3	June 2010
+
+a) EMCS FS1
+
+--------------------
+
+V3.2	March 2010
+
+a) Updated EMCS WSDLs
+
+---------------------
+
+V3.1	February 2010
+
+a) Bug 2071
+
+--------------------
+
+V3.0	January 2010
+
+a) Version 1.1 EMCS
+
+--------------------
+
+V2.9	November 2009
+
+a) Version 1.1 MTR
+b) Updated Calc to version 1.0
+
+--------------------
+
+V2.8	October 2009
+
+a) Version 1 Saving Gateway artefacts
+b) Updated GSL Validator to v1.44
+
+--------------------
+
+V2.7	September 2009
+
+a) Version 3.00 CT artifacts
+b) Updated GSL Validator to v1.41
+c) updates calculator to v0.999
+
+--------------------
+
+V2.6	May 2009
+
+a) Version 2.00 VAT artifacts
+b) Updated GSL Validator to v1.37
+
+--------------------
+
+V2.5	April 2009
+
+a) Version 1.00 CT artifacts
+b) Updated calculator to v0.995
+c) Updated GSL Validator to v1.36
+
+--------------------
+
+V2.4	March 2009
+
+a) Version 1.00 VAT artifacts
+b) Updated GSL Validator to v1.33
+
+--------------------
+
+V2.3	January 2009
+
+a) Version 0.02 VAT artifacts
+
+--------------------
+
+V2.2	January 2009
+
+a) Updated GSL Validator to v1.32
+b) Updated Calculator for 08/09 to v0.94
+
+--------------------
+
+V2.1	December 2008
+
+a) Updated GSL Validator to v1.30
+
+--------------------
+
+V2.0	October 2008
+
+a) Updated GSL Validator to v1.25
+b) Updated Calculator for 08/09 to v0.04
+c) Introduction of web services functionality for EMCS
+
+--------------------
+
+V1.7	September 2008
+
+a) Updated GSL Validator to 1.18
+
+--------------------
+
+V1.6	Mar 2008
+
+a) Updated SA Calc to v0.96
+
+--------------------
+
+V1.5	Mar 2008
+
+a) Updated SA Calc to v0.95
+b) Updated GSL Validator to 1.16
+
+--------------------
+
+V1.4	Feb 2008	
+
+a) Update SA Calc to v0.93
+
+--------------------
+
+V1.3	Jan 2008	
+
+a) Update GSL Validator to version 1.13
+
+--------------------
+
+V1.2	December 2007	
+
+a) Update GSL Validator to version 1.11
+b) Changes to response XML (e.g. namespace changes, elements added & removed)
+c) IR Mark Reciept only generated if no business, schema or SA Calculation errors exist
+
+--------------------
+
+V1.1	November 2007	
+
+a) Introduction of Service Specific Error Mapping Support
+b) Optimised LTS supporting libraries - download size has been reduced by 6MB
+c) Introduced Proxy Server Support
+d) Updated Installation Guide to include proxy server support configuration section 5 and 5.3
+
+--------------------
+

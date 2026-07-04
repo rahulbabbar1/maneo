@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7804</Number>
+		<Type>business</Type>
+		<Text>This submission cannot be accepted as a Full Payment Submission or Earlier Year Update has not been received and successfully validated for this scheme reference.</Text>
+		<Location></Location>
+</Error>

@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7816</Number>
+		<Type>business</Type>
+		<Text>Tax reference (UTR) not recognised. Ensure the Corporation tax reference (CT UTR) is in the correct format or remove CIS deductions suffered claim, to proceed</Text>
+		<Location></Location>
+</Error>

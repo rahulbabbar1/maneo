@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7817</Number>
+		<Type>business</Type>
+		<Text>Cannot claim CIS deductions suffered after an HMRC correction for this tax year. Remove CIS deductions suffered claim to proceed</Text>
+		<Location></Location>
+</Error>

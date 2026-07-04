@@ -1,0 +1,7 @@
+<Error xmlns="http://www.govtalk.gov.uk/CM/errorresponse">
+		<RaisedBy>ChRIS</RaisedBy>
+		<Number>7816</Number>
+		<Type>business</Type>
+		<Text>This End Of Year return cannot be accepted as the employer has been invited to join RTI and the return is within or after the tax year they were invited</Text>
+		<Location>HMRC Office Reference</Location>
+</Error>

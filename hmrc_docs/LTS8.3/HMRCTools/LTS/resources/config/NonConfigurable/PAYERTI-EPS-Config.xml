@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PAYERTIEPSConfig>
+	<!--logging level range from 0 - 8. 1=SEVERE, 8=All, 0=OFF-->
+	<logginglevel>8</logginglevel>
+	<logfile>logs\\logs.txt</logfile>
+	<Identity>
+		<ServiceMessageType>HMRC-PAYE-RTI-EPS,HMRC-PAYE-RTI-EPS-TIL</ServiceMessageType>
+		<EnvelopeNamespace>http://www.govtalk.gov.uk/CM/envelope</EnvelopeNamespace>
+	</Identity>
+	<Handlers>
+		<Handler ExitOnError="false">uk.gov.hmrc.aspire.lts.requesthandlers.MetaDataHandler</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.ValidationHandlerDefault</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.RTIDownloadHandler</Handler>
+		<Handler ExitOnError="true">uk.gov.hmrc.aspire.lts.requesthandlers.PAYEIRMarkHandler</Handler>
+	</Handlers>
+	<Data>
+		<MetaData key="MessageClass">/GovTalkMessage/Header/MessageDetails/Class</MetaData>
+		<MetaData key="IR_HMRC_Mark">/GovTalkMessage/Body/IRenvelope/IRheader/IRmark</MetaData>
+		<MetaData key="SystemTimestamp">/GovTalkMessage/GovTalkDetails/ChannelRouting/Timestamp</MetaData>
+		<MetaData key="AORef">/GovTalkMessage/Body/IRenvelope/RTI/EmployerPaymentSummary/EmpRefs/AORef</MetaData>
+		<MetaData key="AORef1">/GovTalkMessage/Body/IRenvelope/EmployerPaymentSummary/EmpRefs/AORef</MetaData>
+		<MultiData key="MultipleCredential">/GovTalkMessage/GovTalkDetails/Keys</MultiData>
+	</Data>
+</PAYERTIEPSConfig>

@@ -1,0 +1,204 @@
+Based on'HMRC-RIM-MTR-2025-v1-0' of the Individual RIM artefacts.
+
+Version 1.1 Changes (28/01/2025)
+
+SA104F
+=====
+
+* FPS57 - File path updated on "2025 MTRboxes v1.0" XML file
+
+
+
+Version 1.0 Changes since 2023-24
+
+SA100
+=====
+
+* REL11 - Box removed
+
+* REL12 - Box removed
+
+* FIN9 - Description updated
+
+
+SA101
+=====
+
+* AIL10-18 - External ID updated
+
+* AIL7 - Box removed
+
+* AIL8 - Box removed
+
+* AIL9 - Box removed
+
+SA102
+=====
+
+* EMP1.1 - Box added
+
+* EMP3.1 - Box added
+
+* MOR2.1 - Box added
+
+* MOR4.1 - Box added
+
+* MOR12 - Mandatory If updated
+
+* MOR12 - Value validation updated
+
+
+SA103F
+=====
+
+* FSE65 - Box removed
+
+* FSE67 - Box removed
+
+* FSE68 - Name, Description and Validation updated
+
+* FSE69 - Box removed
+
+* FSE73 - Validation updated
+
+* FSE73.1 - Box removed
+
+* FSE73.2 - Box removed
+
+* FSE73.2 - Mandatory IF and Validation removed, Type changed
+
+* FSE73.2 - Validation updated
+
+* FSE74 - Validation updated
+
+* FSE76 - Validation updated, validation moved to Value validation
+
+* FSE77 - Validation updated
+
+* FSE78 - Validation rule removed, validation moved to value validation 
+
+
+SA103S
+=====
+
+* SSE20 - Validation updated
+
+* SSE33 - Validation rule removed, validation moved to Value validation
+
+
+SA104F
+=====
+
+* FPS1-4 - External ID updated
+
+* FPS5 - Box removed
+
+* FPS6 - Box removed
+
+* FPS7 - Box removed
+
+* FPS8-20 - External ID updated
+
+* FPS9 - Name updated
+
+* FPS9 - Description updated
+
+* FPS13 - Box removed
+
+* FPS16 - Validation updated
+
+* FPS16.1 - Box removed
+
+* FPS16.2 - Box removed
+
+* FPS16.2 - Box removed
+
+* FPS16.3 - Type changed, Validation removed, Mandatory if removed
+
+* FPS17 - Validation updated, validation moved to Value validation
+
+* FPS18 - Validation updated, validation moved to Value validation
+
+* FPS21 - Validation updated
+
+* FPS22 - Prohibited If removed
+
+* FPS34.1 - Box removed
+
+* FPS35 - Validation updated
+
+* FPS64-67 - Group removed
+
+* FPS64 - Box removed
+
+* FPS65 - Box removed
+
+* FPS66 - Box removed
+
+* FPS67 - Box removed from group
+
+* FPS67 - Mandatory If updated, Value validation updated
+
+
+SA104S
+=====
+
+* SPS1-4 - External ID updated
+
+* SPS5 - Box removed
+
+* SPS9 - Box added
+
+* SPS16 - vValidation updated
+
+* SPS21 - Validation updated
+
+* SPS22 - Prohibited If removed
+
+
+SA108
+=====
+
+* CGT3-13B - External ID updated
+
+* CGT6 - Name and Description updated
+
+* CGT13 - Name and Description updated
+
+* CGT13A - Box added
+
+* CGT13B - Box added
+
+* CGT13.1-13.8 - Group added
+
+* CGT13.1 - Box added
+
+* CGT13.2 - Box added
+
+* CGT13.3 - Box added
+
+* CGT13.4 - Box added
+
+* CGT13.5 - Box added
+
+* CGT13.6 - Box added
+
+* CGT13.7 - Box added
+
+* CGT13.8 - Box added
+
+* CGT17.1 - Box added
+
+* CGT17.2 - Box added
+
+* CGT17.3 - Box added
+
+* CGT17.4 - Box added
+
+* CGT52EG - Validation updated
+
+* CGT52QG - Validation updated
+
+* CGT52QL - Validation updated
+
+

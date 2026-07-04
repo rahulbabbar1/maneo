@@ -5,6 +5,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "verify:hmrc": "node dist/verify-hmrc-2024-25.js",
+    "test": "node dist/verify-hmrc-2024-25.js"
   }
 }
