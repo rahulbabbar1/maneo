@@ -20,9 +20,31 @@ function addValue(set: number[], pence: number | undefined) {
   set.push(Math.round(pence) / 100);
 }
 
+function addValuesFromObject(set: number[], obj: any) {
+  if (!obj) return;
+  if (typeof obj === 'number') {
+    addValue(set, obj);
+  } else if (Array.isArray(obj)) {
+    for (const val of obj) addValuesFromObject(set, val);
+  } else if (typeof obj === 'object') {
+    for (const key of Object.keys(obj)) {
+      // Avoid scanning technical strings or keys that might contain numbers (like id)
+      if (key === 'id' || key === 'clientId' || key === 'taxYear' || key === 'status' || key === 'updatedAt') continue;
+      addValuesFromObject(set, obj[key]);
+    }
+  }
+}
+
 /** Collect every monetary figure the computation legitimately produced. */
-export function buildAllowedFigures(calc: any, config?: TaxYearConfig): number[] {
+export function buildAllowedFigures(calc: any, returnObj: any, config?: TaxYearConfig): number[] {
   const allowed: number[] = [];
+
+  // 1. Allow all user-supplied input figures (from the Return object)
+  if (returnObj) {
+    addValuesFromObject(allowed, returnObj);
+  }
+
+  // 2. Allow all calculation outputs
   if (calc?.incomeTax) {
     addValue(allowed, calc.incomeTax.personalAllowance);
     addValue(allowed, calc.incomeTax.incomeTaxTotal);
@@ -82,10 +104,11 @@ function isAllowed(amount: number, allowed: number[]): boolean {
 export function enforceFigureGuardrail(
   text: string,
   calc: any,
+  returnObj: any,
   config?: TaxYearConfig
 ): { text: string; redacted: boolean } {
   if (!text) return { text, redacted: false };
-  const allowed = buildAllowedFigures(calc, config);
+  const allowed = buildAllowedFigures(calc, returnObj, config);
   let redacted = false;
 
   const sanitized = text.replace(MONEY_RE, (match, num: string) => {

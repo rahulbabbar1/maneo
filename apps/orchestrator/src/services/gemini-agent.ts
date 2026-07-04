@@ -225,7 +225,7 @@ export class GeminiAgent {
 
     // Fabrication guardrail (spec 6.2): strip any monetary figure the model
     // produced that does not trace to a calculation-tool result.
-    const guarded = enforceFigureGuardrail(replyText, latestCalc, config);
+    const guarded = enforceFigureGuardrail(replyText, latestCalc, returnObj, config);
     if (guarded.redacted) {
       console.warn('[Guardrail] Redacted unverified monetary figure(s) from model reply.');
     }
