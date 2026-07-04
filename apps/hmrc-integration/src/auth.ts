@@ -5,22 +5,45 @@ export interface OAuthToken {
   scopes: string[];
 }
 
+export interface TokenStore {
+  get(agentId: string): Promise<OAuthToken | undefined>;
+  set(agentId: string, token: OAuthToken): Promise<void>;
+  delete(agentId: string): Promise<void>;
+}
+
+export class InMemoryTokenStore implements TokenStore {
+  private tokens = new Map<string, OAuthToken>();
+
+  async get(agentId: string): Promise<OAuthToken | undefined> {
+    return this.tokens.get(agentId);
+  }
+
+  async set(agentId: string, token: OAuthToken): Promise<void> {
+    this.tokens.set(agentId, token);
+  }
+
+  async delete(agentId: string): Promise<void> {
+    this.tokens.delete(agentId);
+  }
+}
+
 /**
  * Handles agent authentication, credentials validation, and token refresh
  * sequences against the HMRC Developer Hub endpoints.
  */
 export class HmrcAuthManager {
-  // TODO (C7 follow-up): persist tokens in GCP Secret Manager keyed to the agent,
-  // encrypted at rest, instead of this in-memory Map (lost on restart). Add PKCE.
-  private tokenStore: Map<string, OAuthToken> = new Map();
   private tokenEndpoint = 'https://test-api.service.hmrc.gov.uk/oauth/token';
   private authorizeEndpoint = 'https://test-api.service.hmrc.gov.uk/oauth/authorize';
+  private tokenStore: TokenStore;
 
   constructor(
     private clientId: string,
     private clientSecret: string,
-    private redirectUri: string
-  ) {}
+    private redirectUri: string,
+    tokenStore?: TokenStore
+  ) {
+    this.tokenStore = tokenStore || new InMemoryTokenStore();
+  }
 
   /**
    * Generates the HMRC Gateway sign-in redirect URL.
@@ -72,7 +95,7 @@ export class HmrcAuthManager {
         scopes: (data.scope || '').split(' '),
       };
 
-      this.tokenStore.set(agentId, token);
+      await this.tokenStore.set(agentId, token);
       return token;
     } catch (error: any) {
       // Fail loudly. A filing product must never proceed on a fabricated token.
@@ -85,7 +108,7 @@ export class HmrcAuthManager {
    * Refreshes an expired access token using the stored refresh token.
    */
   async refreshAccessToken(agentId: string): Promise<string> {
-    const token = this.tokenStore.get(agentId);
+    const token = await this.tokenStore.get(agentId);
     if (!token) {
       throw new Error(`No OAuth tokens found for agent: ${agentId}`);
     }
@@ -116,7 +139,7 @@ export class HmrcAuthManager {
         scopes: (data.scope || '').split(' '),
       };
 
-      this.tokenStore.set(agentId, updatedToken);
+      await this.tokenStore.set(agentId, updatedToken);
       return updatedToken.accessToken;
     } catch (error: any) {
       // Fail loudly and drive re-authorisation rather than faking a token.
@@ -128,8 +151,8 @@ export class HmrcAuthManager {
   /**
    * Checks whether the agent's current token is expired or close to expiration.
    */
-  isTokenExpired(agentId: string): boolean {
-    const token = this.tokenStore.get(agentId);
+  async isTokenExpired(agentId: string): Promise<boolean> {
+    const token = await this.tokenStore.get(agentId);
     if (!token) return true;
     return Date.now() > token.expiresAt - 5 * 60 * 1000;
   }
@@ -137,7 +160,7 @@ export class HmrcAuthManager {
   /**
    * Directly registers a token (used to seed store for tests).
    */
-  seedToken(agentId: string, token: OAuthToken) {
-    this.tokenStore.set(agentId, token);
+  async seedToken(agentId: string, token: OAuthToken) {
+    await this.tokenStore.set(agentId, token);
   }
 }
