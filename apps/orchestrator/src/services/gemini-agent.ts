@@ -71,7 +71,7 @@ export class GeminiAgent {
     if (this.vertexAI) {
       try {
         const model = this.vertexAI.getGenerativeModel({
-          model: 'gemini-2.5-pro',
+          model: 'gemini-2.5-flash',
           systemInstruction: PromptBuilder.buildSystemInstruction(returnObj),
           generationConfig: { maxOutputTokens: 8192, temperature: 0.4 },
           tools: [{ functionDeclarations: VERTEX_FUNCTION_DECLARATIONS as any }],
