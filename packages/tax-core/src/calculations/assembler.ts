@@ -1,5 +1,6 @@
 import { TaxYearConfig, configHash } from '@uk-sa-app/tax-config';
 import { Return } from '@uk-sa-app/return-model';
+import { roundToNearestPenny } from '../utils/rounding.js';
 import { computeIncomeTax, ComputeIncomeTaxOutput } from './income-tax.js';
 import { computeCgt, CgtResult } from './capital-gains.js';
 import { computeFtcr, FtcrResult } from './foreign-tax.js';
@@ -155,7 +156,7 @@ export function computeFullReturn(
     returnObj.sa106.foreignIncome.forEach((item, index) => {
       const key = `${item.countryCode}_${item.incomeType}_${index}`;
       ukTaxOnForeignIncome[key] = totalIncome > 0
-        ? Math.round(incomeTaxOutput.incomeTaxTotal * ((item.grossAmount || 0) / totalIncome))
+        ? roundToNearestPenny(incomeTaxOutput.incomeTaxTotal * ((item.grossAmount || 0) / totalIncome))
         : 0;
     });
     ftcrOutput = computeFtcr({ foreignItems: returnObj.sa106.foreignIncome, ukTaxOnForeignIncome }, config);
@@ -204,7 +205,7 @@ export function computeFullReturn(
   const relevantAmount = Math.max(0, netIncomeTax - taxAlreadyPaidTotal);
   const collectedAtSourceOK = netIncomeTax > 0 && taxAlreadyPaidTotal >= 0.8 * netIncomeTax;
   const paymentsOnAccountRequired = relevantAmount > 100000 && netIncomeTax > 0 && !collectedAtSourceOK;
-  const nextYearPaymentOnAccount = paymentsOnAccountRequired ? Math.round(relevantAmount / 2) : 0;
+  const nextYearPaymentOnAccount = paymentsOnAccountRequired ? roundToNearestPenny(relevantAmount / 2) : 0;
 
   return {
     residenceStatus: isResident ? 'UK Resident' : 'Non UK Resident',

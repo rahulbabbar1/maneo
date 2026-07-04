@@ -1,4 +1,5 @@
 import { TaxYearConfig } from '@uk-sa-app/tax-config';
+import { roundDownToPound, roundToNearestPenny } from '../utils/rounding.js';
 
 export interface DisposalInput {
   assetType: 'residential_property' | 'other_property' | 'listed_shares' | 'unlisted_shares' | 'other';
@@ -47,13 +48,17 @@ type Bucket = 'res' | 'other' | 'badr';
  * beneficial): residential, then other, then BADR-eligible.
  */
 export function computeCgt(input: CgtInput, config: TaxYearConfig): CgtResult {
-  const { disposals, broughtForwardLosses, unusedBasicRateBand } = input;
+  const { disposals, unusedBasicRateBand } = input;
+  const bfLosses = roundDownToPound(input.broughtForwardLosses);
   const cgt = config.capitalGains;
 
-  // 1. Split disposals into positive-gain buckets and current-year losses.
+  // 1. Split disposals into positive-gain buckets and current-year losses with rounding.
   let resGain = 0, otherGain = 0, badrGain = 0, inYearLosses = 0;
   for (const d of disposals) {
-    const net = d.proceeds - d.costs - d.losses;
+    const proceeds = roundDownToPound(d.proceeds);
+    const costs = roundDownToPound(d.costs);
+    const losses = roundDownToPound(d.losses);
+    const net = proceeds - costs - losses;
     if (net < 0) {
       inYearLosses += -net;
     } else if (d.claimBadr) {
@@ -88,7 +93,7 @@ export function computeCgt(input: CgtInput, config: TaxYearConfig): CgtResult {
   // Step 2: brought-forward losses, restricted so they don't reduce below the AEA.
   const netAfterInYear = g.res + g.other + g.badr;
   const usableBf = Math.max(0, netAfterInYear - cgt.annualExemptAmount);
-  const broughtForwardLossesApplied = deduct(Math.min(broughtForwardLosses, usableBf));
+  const broughtForwardLossesApplied = deduct(Math.min(bfLosses, usableBf));
 
   // Step 3: annual exempt amount.
   const annualExemptAmountApplied = deduct(cgt.annualExemptAmount);
@@ -103,7 +108,7 @@ export function computeCgt(input: CgtInput, config: TaxYearConfig): CgtResult {
 
   // BADR: flat rate, does not use the basic-rate band.
   if (g.badr > 0) {
-    const tax = Math.round(g.badr * cgt.badrRate);
+    const tax = roundToNearestPenny(g.badr * cgt.badrRate);
     totalCgtDue += tax;
     breakdown.push({ assetType: 'badr_eligible_assets', gain: g.badr, rate: cgt.badrRate, taxCharged: tax });
   }
@@ -114,12 +119,12 @@ export function computeCgt(input: CgtInput, config: TaxYearConfig): CgtResult {
     remainingBasicBand -= basicAllocated;
     const higherAllocated = g.res - basicAllocated;
     if (basicAllocated > 0) {
-      const t = Math.round(basicAllocated * cgt.basicRateResidential);
+      const t = roundToNearestPenny(basicAllocated * cgt.basicRateResidential);
       totalCgtDue += t;
       breakdown.push({ assetType: 'residential_property_basic', gain: basicAllocated, rate: cgt.basicRateResidential, taxCharged: t });
     }
     if (higherAllocated > 0) {
-      const t = Math.round(higherAllocated * cgt.higherRateResidential);
+      const t = roundToNearestPenny(higherAllocated * cgt.higherRateResidential);
       totalCgtDue += t;
       breakdown.push({ assetType: 'residential_property_higher', gain: higherAllocated, rate: cgt.higherRateResidential, taxCharged: t });
     }
@@ -131,12 +136,12 @@ export function computeCgt(input: CgtInput, config: TaxYearConfig): CgtResult {
     remainingBasicBand -= basicAllocated;
     const higherAllocated = g.other - basicAllocated;
     if (basicAllocated > 0) {
-      const t = Math.round(basicAllocated * cgt.basicRate);
+      const t = roundToNearestPenny(basicAllocated * cgt.basicRate);
       totalCgtDue += t;
       breakdown.push({ assetType: 'other_assets_basic', gain: basicAllocated, rate: cgt.basicRate, taxCharged: t });
     }
     if (higherAllocated > 0) {
-      const t = Math.round(higherAllocated * cgt.higherRate);
+      const t = roundToNearestPenny(higherAllocated * cgt.higherRate);
       totalCgtDue += t;
       breakdown.push({ assetType: 'other_assets_higher', gain: higherAllocated, rate: cgt.higherRate, taxCharged: t });
     }

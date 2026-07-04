@@ -1,4 +1,5 @@
 import { TaxYearConfig } from '@uk-sa-app/tax-config';
+import { roundToNearestPenny } from '../utils/rounding.js';
 
 export interface ReliefsChargesInput {
   adjustedNetIncome: number; // pence
@@ -43,7 +44,7 @@ export function computeReliefsCharges(
       // 1% increase for every £160 (16000 pence) of excess income
       const percentSteps = Math.floor(excess / config.hicbc.divisor);
       hicbcPercentage = Math.min(100, percentSteps) / 100;
-      hicbcAmount = Math.round(childBenefitReceived * hicbcPercentage);
+      hicbcAmount = roundToNearestPenny(childBenefitReceived * hicbcPercentage);
     }
   }
 

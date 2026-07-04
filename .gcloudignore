@@ -1,0 +1,31 @@
+# Exclude local build artifacts and node modules
+node_modules/
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+
+# Exclude large documentation/test folders not needed for production build
+hmrc_docs/
+
+# Git and Firebase directories
+.git/
+.gitignore
+.firebase/
+.firebaserc
+firebase.json
+firestore.rules
+
+# Temporary/Agent configuration folders
+.agents/
+.gemini/
+.nyc_output/
+coverage/
+
+# Environment files
+.env
+.env.*
+*.env
+*.log

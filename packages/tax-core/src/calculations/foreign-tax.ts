@@ -1,4 +1,5 @@
 import { TaxYearConfig } from '@uk-sa-app/tax-config';
+import { roundToNearestPenny } from '../utils/rounding.js';
 
 export interface ForeignIncomeInput {
   countryCode: string; // e.g. "IND"
@@ -77,7 +78,7 @@ export function computeFtcr(input: FtcrInput, _config: TaxYearConfig): FtcrResul
 
     let relievableForeignTax = item.foreignTaxPaid;
     if (treatyLimit !== undefined) {
-      const maxForeignTaxAllowed = Math.round(item.grossAmount * treatyLimit);
+      const maxForeignTaxAllowed = roundToNearestPenny(item.grossAmount * treatyLimit);
       relievableForeignTax = Math.min(item.foreignTaxPaid, maxForeignTaxAllowed);
     }
 

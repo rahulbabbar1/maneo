@@ -1,4 +1,5 @@
 import { TaxYearConfig, TaxBand } from '@uk-sa-app/tax-config';
+import { roundDownToPound, roundToNearestPenny } from '../utils/rounding.js';
 
 export interface ComputeIncomeTaxInput {
   region: 'rUK' | 'scotland' | 'wales';
@@ -68,15 +69,17 @@ export function computeIncomeTax(
 ): ComputeIncomeTaxOutput {
   const {
     region,
-    nonSavingsIncome,
-    savingsIncome,
-    dividendIncome,
-    giftAidGrossedUp,
-    relievablePensionContributions,
     blindPersonsAllowanceClaimed,
     marriageAllowanceTransferor = false,
     marriageAllowanceRecipient = false,
   } = input;
+
+  // Round down gross income and relief values to whole pounds (nearest 100 pence) per HMRC rules
+  const nonSavingsIncome = roundDownToPound(input.nonSavingsIncome);
+  const savingsIncome = roundDownToPound(input.savingsIncome);
+  const dividendIncome = roundDownToPound(input.dividendIncome);
+  const giftAidGrossedUp = roundDownToPound(input.giftAidGrossedUp || 0);
+  const relievablePensionContributions = roundDownToPound(input.relievablePensionContributions || 0);
 
   // 1. Adjusted net income for the taper (net of grossed-up gift aid / pension).
   const totalGrossIncome = nonSavingsIncome + savingsIncome + dividendIncome;
@@ -130,7 +133,7 @@ export function computeIncomeTax(
       const space = upper - cursor;
       const take = Math.min(remaining, space);
       if (take <= 0) continue;
-      const taxCharged = Math.round(take * band.rate);
+      const taxCharged = roundToNearestPenny(take * band.rate);
       allocatedBands.push({ name: band.name, category, amountAllocated: take, rate: band.rate, taxCharged });
       incomeTaxTotal += taxCharged;
       remaining -= take;
@@ -189,7 +192,7 @@ export function computeIncomeTax(
   //    capped at the tax otherwise due (it cannot create a refund).
   let marriageAllowanceReducer = 0;
   if (marriageAllowanceRecipient) {
-    const reducer = Math.round(config.marriageAllowanceTransferLimit * 0.20);
+    const reducer = roundToNearestPenny(config.marriageAllowanceTransferLimit * 0.20);
     marriageAllowanceReducer = Math.min(incomeTaxTotal, reducer);
     incomeTaxTotal -= marriageAllowanceReducer;
   }
