@@ -152,8 +152,33 @@ export default function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Modal State for mock P60 extraction
+  // Modal State for P60 extraction & Legal Definition Affordance ("Brain Off" false claim prevention)
   const [showExtractionModal, setShowExtractionModal] = useState(false);
+  const [legalTopic, setLegalTopic] = useState<{ title: string; definition: string; hmrcRef: string } | null>(null);
+
+  const LEGAL_DEFINITIONS: Record<string, { title: string; definition: string; hmrcRef: string }> = {
+    srt: {
+      title: 'Statutory Residence Test (SRT)',
+      definition: 'HMRC statutory test determining UK tax residence. Consists of: (1) Automatic Overseas Test (<16 days in UK), (2) Automatic UK Test (183+ days in UK or sole home), and (3) Sufficient Ties Test (family, accommodation, work, 90-day ties). Self Assessment requires explicit declaration on SA109.',
+      hmrcRef: 'HMRC RDR3 Manual / SA109 Guidance'
+    },
+    fig: {
+      title: 'Foreign Income & Gains (FIG) Exemption (From 6 April 2025)',
+      definition: 'Replaces the remittance basis. Offers 100% tax exemption on qualifying foreign income & gains for up to 4 tax years for qualifying new residents (non-resident for 10 prior consecutive tax years). IMPORTANT: Electing FIG forfeits your Personal Allowance (£12,570) and CGT Exempt Amount (£3,000).',
+      hmrcRef: 'GOV.UK FIG Regime Policy Paper 2025-26'
+    },
+    split_year: {
+      title: 'Split-Year Treatment (SA109)',
+      definition: 'Applies when you arrive in or leave the UK part-way through a tax year (Cases 1–8). Splits the tax year into UK and overseas parts. HMRC does NOT apply split-year automatically — you must actively claim it on supplementary form SA109.',
+      hmrcRef: 'HMRC RDR3 Section 5'
+    },
+    ftcr: {
+      title: 'Foreign Tax Credit Relief (FTCR)',
+      definition: 'Relief for foreign tax paid overseas to prevent double taxation. Capped at the lower of the actual foreign tax paid OR the incremental UK tax due on that specific income.',
+      hmrcRef: 'HMRC Double Taxation Relief Manual / HS263'
+    }
+  };
+
   const [extractedData, setExtractedData] = useState<{
     employerName: string;
     employerRef: string;
@@ -440,6 +465,9 @@ export default function App() {
           <div className="sidebar-brand">
             <span className="sidebar-brand-name">Maneo</span>
             <span className="sidebar-brand-sub">Self Assessment 2025-26</span>
+            <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--accent-primary)', background: 'rgba(99, 102, 241, 0.12)', padding: '3px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span>🏷️ Expat Tier: £99 (Upfront Fixed)</span>
+            </div>
           </div>
         </div>
 
@@ -506,6 +534,17 @@ export default function App() {
               ) : (
                 <span className="badge badge-success"><span className="badge-dot"></span>HMRC v1.0</span>
               )}
+              <button
+                className="theme-toggle-btn"
+                onClick={() => handleSendMessage('I would like to request a human ATT tax specialist review for my return.')}
+                title="Escalate to Human ATT Tax Specialist"
+                style={{ width: 'auto', padding: '0 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.3)', cursor: 'pointer' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+                </svg>
+                Human Expert Review
+              </button>
               <button
                 className="theme-toggle-btn"
                 onClick={handleDownloadPdf}
@@ -785,6 +824,18 @@ export default function App() {
                       {chip.label}
                     </button>
                   ))}
+                  <button className="chip" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', borderColor: 'rgba(99, 102, 241, 0.3)' }} onClick={() => setLegalTopic(LEGAL_DEFINITIONS.srt)}>
+                    ℹ️ SRT Definition
+                  </button>
+                  <button className="chip" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', borderColor: 'rgba(99, 102, 241, 0.3)' }} onClick={() => setLegalTopic(LEGAL_DEFINITIONS.fig)}>
+                    ℹ️ FIG Exemption Rule
+                  </button>
+                  <button className="chip" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', borderColor: 'rgba(99, 102, 241, 0.3)' }} onClick={() => setLegalTopic(LEGAL_DEFINITIONS.split_year)}>
+                    ℹ️ Split-Year Rule
+                  </button>
+                  <button className="chip" style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', borderColor: 'rgba(99, 102, 241, 0.3)' }} onClick={() => setLegalTopic(LEGAL_DEFINITIONS.ftcr)}>
+                    ℹ️ FTCR Relief Rule
+                  </button>
                 </div>
               )}
 
@@ -880,6 +931,33 @@ export default function App() {
               </button>
               <button className="action-btn" onClick={confirmExtraction}>
                 Confirm & Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Legal Definition Affordance Modal ("Brain Off" Prevention) ── */}
+      {legalTopic && (
+        <div className="modal-overlay" onClick={() => setLegalTopic(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>{legalTopic.title}</h2>
+            </div>
+            <p style={{ lineHeight: '1.5', color: 'var(--text-secondary)', fontSize: '14px' }}>
+              {legalTopic.definition}
+            </p>
+            <div style={{ background: 'rgba(99, 102, 241, 0.1)', padding: '10px 14px', borderRadius: '6px', fontSize: '12px', color: 'var(--accent-primary)', marginTop: '14px', fontWeight: 500 }}>
+              📘 Official Authority: {legalTopic.hmrcRef}
+            </div>
+            <div className="modal-actions" style={{ marginTop: '20px' }}>
+              <button className="action-btn" onClick={() => setLegalTopic(null)}>
+                Got It (Understood)
               </button>
             </div>
           </div>
