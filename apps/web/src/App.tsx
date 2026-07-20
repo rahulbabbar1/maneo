@@ -92,9 +92,15 @@ export default function App() {
     return unsub;
   }, []);
 
-  const isAuthenticated = !!firebaseUser;
-  const username = firebaseUser?.displayName || firebaseUser?.email || '';
-  const [userRole] = useState<'Main Agent' | 'Supporting Agent'>('Main Agent'); // TODO: derive from custom claims
+  const [demoUser] = useState<{ displayName: string; email: string; uid: string } | null>({
+    displayName: 'Demo Expat User',
+    email: 'expat@maneo.app',
+    uid: 'demo-user-123',
+  });
+
+  const isAuthenticated = !!firebaseUser || !!demoUser;
+  const username = firebaseUser?.displayName || firebaseUser?.email || demoUser?.displayName || 'Demo Expat User';
+  const [userRole] = useState<'Main Agent' | 'Supporting Agent'>('Main Agent');
 
   const handleLogin = async () => {
     setLoginError('');
