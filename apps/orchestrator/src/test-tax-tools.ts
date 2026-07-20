@@ -27,7 +27,7 @@ const r = makeReturn();
 const ctx = { returnObj: r };
 
 // Tool set sanity
-assert(TAX_TOOL_DEFINITIONS.length === 8, `8 tools defined (got ${TAX_TOOL_DEFINITIONS.length})`);
+assert(TAX_TOOL_DEFINITIONS.length === 12, `12 tools defined (got ${TAX_TOOL_DEFINITIONS.length})`);
 
 // Record employment (£ in, pence stored)
 let res = executeTaxTool('record_employment', { employerName: 'Acme UK Ltd', grossPay: 85000, taxDeducted: 20123 }, ctx);
@@ -47,9 +47,30 @@ assert(!res.isError && r.sa109!.residenceStatus.figRegimeElected === true, 'reco
 res = executeTaxTool('record_residence', { daysInUk: 10, srtResult: 'maybe', domicileStatus: 'foreign_domiciled' }, ctx);
 assert(res.isError === true, 'invalid srtResult is rejected with a helpful error (poka-yoke)');
 
-// SRT heuristic
+// SRT: automatic UK test
 res = executeTaxTool('run_srt', { daysInUk: 200 }, ctx);
-assert(res.content.includes('resident'), 'run_srt flags 200 days as resident');
+assert(res.content.toLowerCase().includes('resident'), 'run_srt flags 200 days as resident');
+
+// SRT: sufficient-ties test (arriver, 100 days, 3 ties -> resident)
+res = executeTaxTool('run_srt', { daysInUk: 100, residentInPrior3Years: false, ukTies: 3 }, ctx);
+assert(/RESIDENT/.test(res.content) && res.content.includes('ties'), 'run_srt applies the sufficient-ties test for an arriver');
+
+// SRT: automatic overseas (arriver under 46 days -> non-resident)
+res = executeTaxTool('run_srt', { daysInUk: 20, residentInPrior3Years: false }, ctx);
+assert(/NON-RESIDENT/.test(res.content), 'run_srt applies the arriver automatic-overseas test');
+
+// New tool: UK investment income
+res = executeTaxTool('record_uk_investment_income', { ukSavingsIncome: 2000, ukDividendIncome: 1500 }, ctx);
+assert(!res.isError && r.sa100.income!.ukSavingsIncome === 200000, 'record_uk_investment_income stores UK interest in pence');
+
+// New tool: child benefit for HICBC
+res = executeTaxTool('record_child_benefit', { childBenefitReceived: 2074, numberOfChildren: 2 }, ctx);
+assert(!res.isError && r.sa101!.highIncomeChildBenefitCharge.benefitAmountReceived === 207400, 'record_child_benefit stores Child Benefit for HICBC');
+
+// New tool: pension what-if comparison (must NOT mutate the return)
+res = executeTaxTool('compare_pension_contribution', { contributionAmount: 10000 }, ctx);
+assert(!res.isError && res.content.includes('Tax saved'), 'compare_pension_contribution returns a tax-saving what-if');
+assert((r.sa100.reliefs.relievablePensionContributions || 0) === 0, 'compare_pension_contribution does not mutate the return');
 
 // Compute returns verified figures
 res = executeTaxTool('compute_return', {}, ctx);

@@ -5,3 +5,5 @@ export * from './calculations/foreign-tax.js';
 export * from './calculations/reliefs-charges.js';
 export * from './calculations/assembler.js';
 export * from './utils/rounding.js';
+export * from './reconciliation-harness.js';
+

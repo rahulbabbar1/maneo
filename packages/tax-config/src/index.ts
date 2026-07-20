@@ -393,3 +393,6 @@ export function configHash(config: TaxYearConfig): string {
   }
   return (h >>> 0).toString(16).padStart(8, '0');
 }
+
+export * from './exclusions-mapping.js';
+

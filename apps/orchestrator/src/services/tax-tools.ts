@@ -6,14 +6,12 @@
 //   - tools return high-signal, human-readable context (£, not pence)
 //   - poka-yoke via the return-model Zod schemas
 //   - helpful, actionable error strings (surfaced to the model as is_error)
-//
-// The agent uses these to OWN the return (record data) and to quote VERIFIED
-// figures (compute_return). Because figures arrive as structured tool output,
-// the model never needs to invent them — replacing the old prose censor.
+//   - compute_return returns not just figures but PLANNING INSIGHTS and ENGINE
+//     WARNINGS, so the model reasons like an adviser and never invents numbers.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { computeFullReturn } from '@uk-sa-app/tax-core';
-import { getConfig, CONFIGS } from '@uk-sa-app/tax-config';
+import { getConfig, CONFIGS, TaxYearConfig } from '@uk-sa-app/tax-config';
 import {
   Return,
   SA102Schema,
@@ -36,14 +34,12 @@ export interface ToolResult {
 }
 
 // ─── Tool definitions (model-agnostic JSON-schema shape) ─────────────────────
-// Descriptions are prompt-engineered: written like a docstring for a new hire,
-// stating £ convention, when to call, and boundaries with other tools.
 
 export const TAX_TOOL_DEFINITIONS = [
   {
     name: 'get_return_context',
     description:
-      'Returns a readable snapshot of what has been captured on this return so far, plus the gaps still outstanding. Call this at the start of a turn when you are unsure what is already recorded, instead of re-asking the user.',
+      'Returns a readable snapshot of what has been captured on this return so far, plus the gaps still outstanding. The snapshot is also shown to you in the system prompt each turn; call this only when you need the fuller detail. Never re-ask the user for something the snapshot already shows.',
     parameters: { type: 'object', properties: {}, required: [] },
   },
   {
@@ -64,7 +60,7 @@ export const TAX_TOOL_DEFINITIONS = [
   {
     name: 'record_foreign_income',
     description:
-      'Records one foreign income item (SA106). Amounts in POUNDS (£). Use ISO 3-letter country codes (e.g. IND, USA). incomeType is one of savings, dividends, employment, property, other. Set treatyRateLimit as a fraction (0.15 for a 15% treaty cap) when a double-tax treaty caps the foreign rate.',
+      'Records one foreign income item (SA106) — e.g. overseas bank interest, foreign dividends, overseas rental. Amounts in POUNDS (£). Use ISO 3-letter country codes (IND, USA). incomeType is one of savings, dividends, employment, property, other. Set treatyRateLimit as a fraction (0.15 for the UK–India 15% dividend cap) when a Double Taxation Agreement caps the foreign rate. Foreign income is central to this niche — capture it whenever a foreign national has any overseas income.',
     parameters: {
       type: 'object',
       properties: {
@@ -79,16 +75,29 @@ export const TAX_TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'record_uk_investment_income',
+    description:
+      'Records UK (domestic) investment income on the SA100: UK bank/building-society interest and UK dividends. Amounts in POUNDS (£). Foreign interest/dividends do NOT go here — use record_foreign_income for those. Only pass the fields the user mentioned.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ukSavingsIncome: { type: 'number', description: 'Gross UK interest in POUNDS (£)' },
+        ukDividendIncome: { type: 'number', description: 'Gross UK dividends in POUNDS (£)' },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'record_residence',
     description:
-      'Records residence & domicile (SA109) for the return. daysInUk drives the Statutory Residence Test. Set figRegimeElected when the client elects the Foreign Income & Gains regime. Call run_srt first if the residence status is not yet known.',
+      'Records residence & domicile (SA109). daysInUk drives the Statutory Residence Test. srtResult is the concluded status. Set domicileStatus (foreign_domiciled for most foreign nationals), figRegimeElected when the client elects the 4-year Foreign Income & Gains regime, and overseasWorkdayReliefClaimed where OWR applies. Call run_srt first if the status is not yet clear.',
     parameters: {
       type: 'object',
       properties: {
         daysInUk: { type: 'number', description: 'Days spent in the UK in the tax year' },
         srtResult: { type: 'string', enum: ['resident', 'non_resident', 'split_year'] },
         domicileStatus: { type: 'string', enum: ['uk_domiciled', 'foreign_domiciled'] },
-        figRegimeElected: { type: 'boolean', description: 'FIG regime elected (default false)' },
+        figRegimeElected: { type: 'boolean', description: 'FIG regime elected (default false). Note: electing FIG forfeits the personal allowance and CGT annual exempt amount.' },
         overseasWorkdayReliefClaimed: { type: 'boolean', description: 'OWR claimed (default false)' },
       },
       required: ['daysInUk', 'srtResult', 'domicileStatus'],
@@ -97,25 +106,54 @@ export const TAX_TOOL_DEFINITIONS = [
   {
     name: 'record_reliefs',
     description:
-      'Records reliefs on the SA100. Amounts in POUNDS (£). giftAidGrossedUp is the grossed-up Gift Aid figure. Only include fields the user mentioned; omitted fields are left unchanged.',
+      'Records reliefs on the SA100. Amounts in POUNDS (£). giftAidGrossedUp is the grossed-up Gift Aid figure. Pension contributions and Gift Aid extend the tax bands and reduce adjusted net income — the key levers for the 60% taper band and HICBC. Only include fields the user mentioned; omitted fields are left unchanged.',
     parameters: {
       type: 'object',
       properties: {
         giftAidGrossedUp: { type: 'number', description: 'Grossed-up Gift Aid in POUNDS (£)' },
-        relievablePensionContributions: { type: 'number', description: 'Pension contributions in POUNDS (£)' },
+        relievablePensionContributions: { type: 'number', description: 'Relievable pension contributions in POUNDS (£)' },
         blindPersonsAllowance: { type: 'boolean' },
       },
       required: [],
     },
   },
   {
+    name: 'record_child_benefit',
+    description:
+      'Records Child Benefit received by the client or their partner, so the High Income Child Benefit Charge (HICBC) can be assessed. Call this when the client has income over £60,000 and confirms Child Benefit was received. childBenefitReceived is the total received in the year, in POUNDS (£).',
+    parameters: {
+      type: 'object',
+      properties: {
+        childBenefitReceived: { type: 'number', description: 'Total Child Benefit received in the year, in POUNDS (£)' },
+        numberOfChildren: { type: 'number', description: 'Number of children (optional)' },
+      },
+      required: ['childBenefitReceived'],
+    },
+  },
+  {
+    name: 'record_student_loan',
+    description:
+      'Records the client\'s student loan repayment plan so any repayment due through Self Assessment is computed. planType is one of plan_1, plan_2, plan_4, plan_5, postgraduate, none.',
+    parameters: {
+      type: 'object',
+      properties: {
+        planType: { type: 'string', enum: ['plan_1', 'plan_2', 'plan_4', 'plan_5', 'postgraduate', 'none'] },
+      },
+      required: ['planType'],
+    },
+  },
+  {
     name: 'run_srt',
     description:
-      'Runs a simplified Statutory Residence Test day-count check and returns the likely residence status with the reason. Use this to help determine residence before recording it. Does not mutate the return.',
+      'Statutory Residence Test helper. Evaluates the automatic overseas tests, automatic UK test, and the sufficient-ties test, and returns the concluded (or provisional) status with reasoning. daysInUk is required. Provide residentInPrior3Years (was the client UK-resident in any of the previous 3 tax years — distinguishes an "arriver" from a "leaver") and ukTies (count of UK ties) for a firm conclusion. Does not mutate the return.',
     parameters: {
       type: 'object',
       properties: {
         daysInUk: { type: 'number', description: 'Days spent in the UK in the tax year' },
+        residentInPrior3Years: { type: 'boolean', description: 'True if UK-resident in any of the previous 3 tax years (leaver); false if not (arriver)' },
+        ukTies: { type: 'number', description: 'Number of UK ties: family, accommodation, work (40+ UK workdays), 90-day, and (leavers only) country' },
+        fullTimeWorkOverseas: { type: 'boolean', description: 'Client works full-time overseas' },
+        fullTimeWorkUk: { type: 'boolean', description: 'Client works full-time in the UK' },
       },
       required: ['daysInUk'],
     },
@@ -123,21 +161,30 @@ export const TAX_TOOL_DEFINITIONS = [
   {
     name: 'compute_return',
     description:
-      'Runs the deterministic HMRC calculation engine on everything recorded so far and returns the verified figures (income tax, personal allowance, band breakdown, balancing payment). ALWAYS use these exact returned figures when telling the user any monetary amount — never estimate tax yourself.',
+      'Runs the deterministic HMRC calculation engine on everything recorded so far and returns the VERIFIED figures (income tax, personal allowance after taper, band-by-band breakdown, HICBC, FTCR, balancing payment, payments on account) PLUS planning insights and engine warnings. ALWAYS use these exact figures when telling the user any monetary amount — never estimate tax yourself. Read the planning insights and pass the relevant ones to the client.',
     parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'compare_pension_contribution',
+    description:
+      'Quantifies the tax effect of a personal pension contribution by running the engine twice — once as-is and once with the extra relievable contribution added — and returns the EXACT tax saving. Use this to make 60%-taper-band and HICBC advice concrete (e.g. "a £21,000 contribution saves £X"). This is a what-if only: it does NOT change the return. Amount in POUNDS (£).',
+    parameters: {
+      type: 'object',
+      properties: {
+        contributionAmount: { type: 'number', description: 'Additional relievable pension contribution to model, in POUNDS (£)' },
+      },
+      required: ['contributionAmount'],
+    },
   },
   {
     name: 'validate_return',
     description:
-      'Checks whether the return is complete enough to submit and flags blocking issues or HMRC online-filing exclusions. Call before declaring/submitting.',
+      'Checks whether the return is complete enough to submit and flags blocking issues, missing items, and HMRC online-filing exclusions relevant to foreign-national returns. Call before declaring/submitting.',
     parameters: { type: 'object', properties: {}, required: [] },
   },
 ] as const;
 
 // ─── Executor ────────────────────────────────────────────────────────────────
-// Applies a tool call against the current return. Mutations are validated
-// through the return-model Zod schemas, so malformed input yields a helpful
-// error the model can recover from — rather than corrupting the return.
 
 export function executeTaxTool(
   name: string,
@@ -189,6 +236,16 @@ export function executeTaxTool(
         };
       }
 
+      case 'record_uk_investment_income': {
+        if (!r.sa100.income) r.sa100.income = { ukSavingsIncome: 0, ukDividendIncome: 0 };
+        if (args.ukSavingsIncome != null) r.sa100.income.ukSavingsIncome = toPence(args.ukSavingsIncome);
+        if (args.ukDividendIncome != null) r.sa100.income.ukDividendIncome = toPence(args.ukDividendIncome);
+        return {
+          mutated: true,
+          content: `Recorded UK investment income: interest ${gbp(r.sa100.income.ukSavingsIncome)}, dividends ${gbp(r.sa100.income.ukDividendIncome)}.`,
+        };
+      }
+
       case 'record_residence': {
         const res = SA109Schema.parse({
           residenceStatus: {
@@ -201,9 +258,10 @@ export function executeTaxTool(
         });
         r.sa109 = res;
         const s = res.residenceStatus;
+        const figNote = s.figRegimeElected ? ' FIG elected — personal allowance and CGT annual exempt amount are forfeited this year.' : '';
         return {
           mutated: true,
-          content: `Recorded residence: ${s.daysInUk} days in UK, status ${s.srtResult}, ${s.domicileStatus}${s.figRegimeElected ? ', FIG regime elected' : ''}.`,
+          content: `Recorded residence: ${s.daysInUk} days in UK, status ${s.srtResult}, ${s.domicileStatus}${s.figRegimeElected ? ', FIG regime elected' : ''}.${figNote}`,
         };
       }
 
@@ -218,20 +276,60 @@ export function executeTaxTool(
         };
       }
 
-      case 'run_srt': {
-        const d = Number(args.daysInUk);
-        let status = 'inconclusive — depends on ties test';
-        if (d < 16) status = 'non_resident (fewer than 16 days)';
-        else if (d >= 183) status = 'resident (183 days or more — automatic UK test)';
-        else if (d < 46) status = 'likely non_resident (arriver, under 46 days)';
+      case 'record_child_benefit': {
+        if (!r.sa101) r.sa101 = { highIncomeChildBenefitCharge: { incomeOverThreshold: true, numberOfChildren: 0, benefitAmountReceived: 0 }, studentLoan: { planType: 'none' } };
+        const h = r.sa101.highIncomeChildBenefitCharge;
+        if (args.childBenefitReceived != null) h.benefitAmountReceived = toPence(args.childBenefitReceived);
+        if (args.numberOfChildren != null) h.numberOfChildren = args.numberOfChildren;
+        h.incomeOverThreshold = true;
         return {
-          content: `SRT day-count for ${d} days: ${status}. Note: this is a day-count heuristic; the full SRT also considers automatic overseas/UK tests and sufficient-ties. Confirm before recording.`,
+          mutated: true,
+          content: `Recorded Child Benefit received: ${gbp(h.benefitAmountReceived)}${h.numberOfChildren ? ` for ${h.numberOfChildren} child(ren)` : ''}. HICBC (if any) will be computed by compute_return.`,
         };
       }
 
+      case 'record_student_loan': {
+        if (!r.sa101) r.sa101 = { highIncomeChildBenefitCharge: { incomeOverThreshold: false, numberOfChildren: 0, benefitAmountReceived: 0 }, studentLoan: { planType: 'none' } };
+        r.sa101.studentLoan.planType = args.planType;
+        return { mutated: true, content: `Recorded student loan plan: ${args.planType}.` };
+      }
+
+      case 'run_srt':
+        return { content: evaluateSrt(args) };
+
       case 'compute_return': {
         const calc = computeFullReturn(r, config);
-        return { content: describeComputation(calc, r, year) };
+        return { content: describeComputation(calc, year, config) };
+      }
+
+      case 'compare_pension_contribution': {
+        const add = toPence(args.contributionAmount || 0);
+        if (add <= 0) return { isError: true, content: 'compare_pension_contribution needs a positive contributionAmount (in £).' };
+        const baseline = computeFullReturn(r, config);
+        const clone: Return = JSON.parse(JSON.stringify(r));
+        const reliefs = clone.sa100.reliefs
+          || (clone.sa100.reliefs = { giftAidGrossedUp: 0, relievablePensionContributions: 0, blindPersonsAllowance: false, marriageAllowanceTransferor: false, marriageAllowanceRecipient: false });
+        reliefs.relievablePensionContributions = (reliefs.relievablePensionContributions || 0) + add;
+        const withPension = computeFullReturn(clone, config);
+        const liability = (c: any) =>
+          Math.max(0, (c.incomeTax?.incomeTaxTotal || 0) - (c.ftcr?.totalAllowedCredit || 0))
+          + (c.charges?.hicbcAmount || 0) + (c.charges?.studentLoanBalanceDue || 0) + (c.cgt?.totalCgtDue || 0);
+        const before = liability(baseline);
+        const after = liability(withPension);
+        const saving = before - after;
+        const effRate = add > 0 ? (saving / add) * 100 : 0;
+        const hicbcLine = (baseline.charges?.hicbcAmount || withPension.charges?.hicbcAmount)
+          ? `\n- HICBC: ${gbp(baseline.charges?.hicbcAmount || 0)} → ${gbp(withPension.charges?.hicbcAmount || 0)}` : '';
+        return {
+          content:
+            `What-if only (this does NOT change the return): an extra pension contribution of ${gbp(add)}.\n` +
+            `- Total tax liability now: ${gbp(before)}\n` +
+            `- Total tax liability with the contribution: ${gbp(after)}\n` +
+            `- Tax saved: ${gbp(saving)} (effective ${effRate.toFixed(0)}% relief on the contribution)\n` +
+            `- Personal allowance: ${gbp(baseline.incomeTax?.personalAllowance || 0)} → ${gbp(withPension.incomeTax?.personalAllowance || 0)}` +
+            hicbcLine +
+            `\nNote: this is the reduction in tax due ON THE RETURN (higher-rate relief plus any reclaimed personal allowance); basic-rate relief is given separately at source by the pension provider, so the total benefit is larger. Pension annual-allowance limits may apply. Quote these exact figures; do not recalculate.`,
+        };
       }
 
       case 'validate_return':
@@ -241,10 +339,54 @@ export function executeTaxTool(
         return { isError: true, content: `Unknown tool "${name}".` };
     }
   } catch (err: any) {
-    // Poka-yoke: return an actionable message the model can recover from.
     const msg = err?.errors ? JSON.stringify(err.errors) : (err?.message || String(err));
     return { isError: true, content: `Could not apply ${name}: ${msg}. Check the field values and try again.` };
   }
+}
+
+// ─── Statutory Residence Test (deterministic helper) ─────────────────────────
+
+function evaluateSrt(args: any): string {
+  const d = Number(args.daysInUk);
+  if (Number.isNaN(d)) return 'run_srt needs daysInUk (a number).';
+  const priorKnown = typeof args.residentInPrior3Years === 'boolean';
+  const leaver = args.residentInPrior3Years === true;
+  const arriver = args.residentInPrior3Years === false;
+  const ties = args.ukTies != null ? Number(args.ukTies) : null;
+
+  // Automatic overseas tests
+  if (args.fullTimeWorkOverseas) {
+    return `SRT: full-time work overseas test may apply — if average ≥35 hrs/week overseas with fewer than 91 UK days and fewer than 31 UK workdays, the client is NON-RESIDENT. Confirm the day/workday counts.`;
+  }
+  if (d < 16) return `SRT: ${d} days. Automatic overseas test met (fewer than 16 UK days) → NON-RESIDENT.`;
+  if (arriver && d < 46) return `SRT: ${d} days, arriver (not UK-resident in any of the previous 3 years). Automatic overseas test met (fewer than 46 days) → NON-RESIDENT.`;
+
+  // Automatic UK tests
+  if (d >= 183) return `SRT: ${d} days. Automatic UK test met (183 days or more) → RESIDENT.`;
+  if (args.fullTimeWorkUk) return `SRT: ${d} days with full-time work in the UK → likely RESIDENT under the automatic UK test. Confirm the 365-day full-time-work condition.`;
+
+  // Sufficient-ties test
+  if (!priorKnown) {
+    return `SRT: ${d} days, but no automatic test is decisive. To conclude I need to know whether the client was UK-resident in any of the previous 3 tax years (arriver vs leaver) and how many UK ties they have (family, accommodation, 90-day, work, and — leavers only — country). Please establish those.`;
+  }
+  let needed: number;
+  if (leaver) {
+    if (d <= 45) needed = 4;
+    else if (d <= 90) needed = 3;
+    else if (d <= 120) needed = 2;
+    else needed = 1;
+  } else {
+    // arriver, 46–182 days
+    if (d <= 90) needed = 4;
+    else if (d <= 120) needed = 3;
+    else needed = 2;
+  }
+  const who = leaver ? 'leaver' : 'arriver';
+  if (ties == null) {
+    return `SRT: ${d} days (${who}). No automatic test decisive; the sufficient-ties test applies. A ${who} at ${d} days is UK-RESIDENT if they have ${needed}+ UK ties. Ask about ties (family, accommodation, 90-day, work${leaver ? ', country' : ''}) to conclude.`;
+  }
+  const resident = ties >= needed;
+  return `SRT: ${d} days (${who}), ${ties} UK ties vs ${needed} required → ${resident ? 'RESIDENT' : 'NON-RESIDENT'} under the sufficient-ties test. Confirm the tie assessment before recording.`;
 }
 
 // ─── Readable context builders ───────────────────────────────────────────────
@@ -254,52 +396,145 @@ export function describeReturn(r: Return): string {
 
   if (r.sa102?.length) {
     const total = r.sa102.reduce((a, j) => a + j.grossPay, 0);
-    lines.push(`Employment: ${r.sa102.length} job(s), total gross ${gbp(total)}.`);
+    lines.push(`Employment: ${r.sa102.length} job(s), total gross ${gbp(total)} — ${r.sa102.map(j => `${j.employerName} ${gbp(j.grossPay)}`).join('; ')}.`);
   } else lines.push('Employment: none recorded.');
 
   if (r.sa106?.foreignIncome?.length) {
     lines.push(`Foreign income: ${r.sa106.foreignIncome.length} item(s) — ${r.sa106.foreignIncome.map(i => `${i.countryCode} ${i.incomeType} ${gbp(i.grossAmount)}`).join('; ')}.`);
   } else lines.push('Foreign income: none recorded.');
 
+  const inc = r.sa100?.income;
+  if (inc && (inc.ukSavingsIncome || inc.ukDividendIncome)) {
+    lines.push(`UK investment income: interest ${gbp(inc.ukSavingsIncome || 0)}, dividends ${gbp(inc.ukDividendIncome || 0)}.`);
+  }
+
   if (r.sa109) {
     const s = r.sa109.residenceStatus;
     lines.push(`Residence: ${s.daysInUk} days, ${s.srtResult}, ${s.domicileStatus}${s.figRegimeElected ? ', FIG elected' : ''}.`);
   } else lines.push('Residence (SA109): not yet recorded.');
 
-  const rl = r.sa100.reliefs;
-  if (rl.giftAidGrossedUp || rl.relievablePensionContributions) {
+  const cb = r.sa101?.highIncomeChildBenefitCharge;
+  if (cb && cb.benefitAmountReceived) lines.push(`Child Benefit received: ${gbp(cb.benefitAmountReceived)} (HICBC in scope).`);
+  if (r.sa101?.studentLoan && r.sa101.studentLoan.planType !== 'none') lines.push(`Student loan: ${r.sa101.studentLoan.planType}.`);
+
+  const rl = r.sa100?.reliefs;
+  if (rl && (rl.giftAidGrossedUp || rl.relievablePensionContributions)) {
     lines.push(`Reliefs: Gift Aid ${gbp(rl.giftAidGrossedUp)}, pension ${gbp(rl.relievablePensionContributions)}.`);
   } else lines.push('Reliefs: none recorded.');
 
   return lines.join('\n');
 }
 
-export function describeComputation(calc: any, r: Return, year: string): string {
-  const it = calc?.incomeTax || {};
-  const lines: string[] = [`Verified computation for ${year} (from the calculation engine):`];
-  if (it.personalAllowance != null) lines.push(`- Personal allowance: ${gbp(it.personalAllowance)}`);
-  if (it.incomeTaxTotal != null) lines.push(`- Total income tax: ${gbp(it.incomeTaxTotal)}`);
+function bandLabel(name: string): string {
+  const map: Record<string, string> = {
+    basic: 'Basic rate', higher: 'Higher rate', additional: 'Additional rate',
+    savings_starting_rate: 'Starting rate for savings', personal_savings_allowance: 'Personal savings allowance',
+    dividend_allowance: 'Dividend allowance',
+  };
+  return map[name] || name;
+}
 
-  const bands = it.allocatedBands || [];
-  for (const b of bands) {
-    if (b.taxCharged) lines.push(`    · ${b.name} @ ${(b.rate * 100).toFixed(1)}%: ${gbp(b.taxCharged)}`);
+function planningInsights(calc: any, config: TaxYearConfig): string[] {
+  const out: string[] = [];
+  const ani = calc.adjustedNetIncome || 0;
+  const taper = config.personalAllowanceTaperLimit;
+  const additionalStart = taper + 2 * config.personalAllowance; // £125,140 for a standard PA
+
+  if (ani > taper && ani <= additionalStart) {
+    const inBand = Math.min(ani, additionalStart) - taper;
+    out.push(`Adjusted net income of ${gbp(ani)} is in the ${gbp(taper)}–${gbp(additionalStart)} band where the personal allowance tapers away, giving an effective ~60% marginal rate on ${gbp(inBand)} of income. A pension contribution or Gift Aid reduces adjusted net income and reclaims personal allowance — flag this and re-run compute_return to quantify it.`);
+  } else if (ani > additionalStart && ani < additionalStart + 500000) {
+    out.push(`Adjusted net income of ${gbp(ani)} is just above ${gbp(additionalStart)} (additional-rate threshold); the personal allowance is already fully lost.`);
   }
-  if (calc?.balancingPayment != null) {
+
+  const hicbc = config.hicbc;
+  if (hicbc && calc.charges?.hicbcAmount > 0 && ani < hicbc.upperThreshold) {
+    out.push(`HICBC of ${gbp(calc.charges.hicbcAmount)} applies because adjusted net income (${gbp(ani)}) exceeds ${gbp(hicbc.lowerThreshold)}. A pension contribution bringing adjusted net income below ${gbp(hicbc.lowerThreshold)} would remove the charge entirely.`);
+  }
+
+  if (calc.figRegimeElected) {
+    out.push('FIG regime is elected: qualifying foreign income/gains are excluded, but the personal allowance and CGT annual exempt amount are forfeited. Confirm this is the better outcome versus taxing the foreign income with FTCR.');
+  }
+  return out;
+}
+
+export function describeComputation(calc: any, year: string, config: TaxYearConfig): string {
+  const it = calc?.incomeTax || {};
+  const L: string[] = [`Verified computation for ${year} (from the deterministic engine — quote these EXACT figures, do not recalculate):`];
+
+  L.push(`- Total income: ${gbp(calc.totalIncome || 0)}`);
+  L.push(`- Adjusted net income: ${gbp(calc.adjustedNetIncome || 0)}`);
+
+  if (it.personalAllowance != null) {
+    const paFull = config.personalAllowance;
+    let note = '';
+    if (it.personalAllowance === 0) note = ' (fully tapered away)';
+    else if (it.personalAllowance < paFull) note = ` (reduced from ${gbp(paFull)} by the £1-for-£2 income taper)`;
+    L.push(`- Personal allowance: ${gbp(it.personalAllowance)}${note}`);
+  }
+
+  if (it.incomeTaxTotal != null) L.push(`- Total income tax: ${gbp(it.incomeTaxTotal)}`);
+  for (const b of (it.allocatedBands || [])) {
+    if (b.taxCharged) L.push(`    · ${bandLabel(b.name)} @ ${(b.rate * 100).toFixed(2)}%: ${gbp(b.taxCharged)}`);
+  }
+
+  if (calc.ftcr?.totalAllowedCredit) L.push(`- Foreign Tax Credit Relief: −${gbp(calc.ftcr.totalAllowedCredit)}`);
+  if (calc.charges?.hicbcAmount) L.push(`- High Income Child Benefit Charge: ${gbp(calc.charges.hicbcAmount)}`);
+  if (calc.charges?.studentLoanBalanceDue) L.push(`- Student loan repayment due: ${gbp(calc.charges.studentLoanBalanceDue)}`);
+  if (calc.cgt?.totalCgtDue) L.push(`- Capital Gains Tax: ${gbp(calc.cgt.totalCgtDue)}`);
+
+  L.push(`- Tax already paid at source (PAYE etc.): ${gbp(calc.taxAlreadyPaidTotal || 0)}`);
+  if (calc.balancingPayment != null) {
     const bp = calc.balancingPayment;
-    lines.push(`- Balancing payment ${bp >= 0 ? 'due' : 'refund'}: ${gbp(Math.abs(bp))}`);
+    L.push(`- ${bp >= 0 ? 'Balancing payment DUE' : 'Refund due'}: ${gbp(Math.abs(bp))}`);
   }
-  if (calc?.figRegimeElected) lines.push('- FIG regime applied.');
-  lines.push('Quote these exact figures to the user; do not recalculate or round them yourself.');
-  return lines.join('\n');
+  if (calc.paymentsOnAccountRequired) {
+    L.push(`- Payments on account required for next year: ${gbp(calc.nextYearPaymentOnAccount)} each (two instalments).`);
+  }
+
+  const insights = planningInsights(calc, config);
+  if (insights.length) {
+    L.push('PLANNING INSIGHTS (surface the relevant ones to the client, in your own words):');
+    for (const i of insights) L.push(`  • ${i}`);
+  }
+  if (calc.warnings?.length) {
+    L.push('ENGINE NOTES (modelling caveats — mention if relevant, and never overstate certainty):');
+    for (const w of calc.warnings) L.push(`  • ${w}`);
+  }
+
+  L.push('Do not recalculate or round any of these figures yourself.');
+  return L.join('\n');
 }
 
 export function validateReturn(r: Return): string {
   const issues: string[] = [];
-  if (!r.sa102?.length && !r.sa106?.foreignIncome?.length) issues.push('No income recorded (employment or foreign).');
-  if (!r.sa109) issues.push('Residence status (SA109) not recorded — required for foreign-national returns.');
+  const advisories: string[] = [];
+
+  if (!r.sa102?.length && !r.sa106?.foreignIncome?.length && !(r.sa100?.income?.ukSavingsIncome || r.sa100?.income?.ukDividendIncome)) {
+    issues.push('No income recorded (employment, foreign, or UK investment).');
+  }
+  if (!r.sa109) issues.push('Residence status (SA109) not recorded — required for a foreign-national return.');
   if (r.sa106?.foreignIncome?.length && !r.sa109) issues.push('Foreign income present but residence not established.');
   if (!r.taxYear) issues.push('Tax year not set.');
 
-  if (!issues.length) return 'Validation passed: the return has the minimum data required to proceed to review/declaration.';
-  return `Validation found ${issues.length} blocking issue(s):\n` + issues.map(i => `- ${i}`).join('\n');
+  // Domain advisories (non-blocking, but a good adviser checks these).
+  const foreignDom = r.sa109?.residenceStatus?.domicileStatus === 'foreign_domiciled';
+  if (foreignDom && !r.sa106?.foreignIncome?.length && !r.sa109?.residenceStatus?.figRegimeElected) {
+    advisories.push('Client is foreign-domiciled but no foreign income is recorded — confirm whether they have any overseas income (home-country interest, dividends, property) or wish to claim the FIG regime.');
+  }
+  const empTotal = (r.sa102 || []).reduce((a, j) => a + (j.grossPay || 0), 0);
+  if (empTotal > 6000000 && !r.sa101?.highIncomeChildBenefitCharge?.benefitAmountReceived) {
+    advisories.push('Income appears over £60,000 — check whether the client or their partner received Child Benefit (HICBC may apply).');
+  }
+
+  const parts: string[] = [];
+  if (issues.length) {
+    parts.push(`Validation found ${issues.length} blocking issue(s):\n` + issues.map(i => `- ${i}`).join('\n'));
+  } else {
+    parts.push('Validation passed: the return has the minimum data required to proceed to review/declaration.');
+  }
+  if (advisories.length) {
+    parts.push(`Adviser checks (non-blocking):\n` + advisories.map(a => `- ${a}`).join('\n'));
+  }
+  return parts.join('\n\n');
 }

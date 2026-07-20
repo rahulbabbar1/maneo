@@ -11,6 +11,7 @@ export interface ComputeIncomeTaxInput {
   blindPersonsAllowanceClaimed: boolean;
   marriageAllowanceTransferor?: boolean; // gives away part of PA
   marriageAllowanceRecipient?: boolean;  // receives a tax reducer
+  personalAllowanceForfeited?: boolean;  // FIG regime claimants forfeit the PA
 }
 
 export interface ComputedTaxBandResult {
@@ -88,6 +89,10 @@ export function computeIncomeTax(
 
   // 2. Personal allowance, then apply marriage-allowance transfer if giving away.
   let personalAllowance = computePersonalAllowance(adjustedNetIncome, config, blindPersonsAllowanceClaimed);
+  if (input.personalAllowanceForfeited) {
+    // FIG-regime claimants are not entitled to the personal allowance for the year.
+    personalAllowance = 0;
+  }
   if (marriageAllowanceTransferor) {
     personalAllowance = Math.max(0, personalAllowance - config.marriageAllowanceTransferLimit);
   }

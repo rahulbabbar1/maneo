@@ -241,10 +241,11 @@ export default function App() {
     }
   };
 
-  // File Upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File Upload — sends the real document to the extractor; never fabricates data.
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = ''; // allow re-uploading the same file later
 
     addMessageToActiveSession({
       id: Date.now().toString(),
@@ -254,16 +255,54 @@ export default function App() {
     });
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      setExtractedData({
-        employerName: 'Acme UK Ltd',
-        employerRef: '120/A4590',
-        grossPay: 85000,
-        taxDeducted: 20123.45,
+    const botSay = (text: string) =>
+      addMessageToActiveSession({
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
-      setShowExtractionModal(true);
-    }, 1200);
+
+    try {
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(new Error('read failed'));
+        reader.readAsDataURL(file);
+      });
+
+      const headers = await authHeaders();
+      const response = await fetch(`${API_BASE}/api/extract-document`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/octet-stream' }),
+      });
+      const data = await response.json();
+      setIsTyping(false);
+
+      const ex = data?.extraction;
+      if (response.ok && data?.status === 'success' && ex?.isP60 && ex.grossPay != null) {
+        setExtractedData({
+          employerName: ex.employerName || 'Unknown employer',
+          employerRef: ex.employerRef || '',
+          grossPay: ex.grossPay,
+          taxDeducted: ex.taxDeducted ?? 0,
+        });
+        setShowExtractionModal(true);
+      } else {
+        const kind = ex?.documentType || 'an unrecognised document';
+        botSay(
+          `I couldn't use that as a P60 — it looks like ${kind}. Please upload your P60 or P45, ` +
+          `or just tell me your employer, gross pay and tax deducted and I'll record them directly.`,
+        );
+      }
+    } catch (err) {
+      setIsTyping(false);
+      botSay(
+        "Sorry, I couldn't read that document. You can try again, or tell me your employer, " +
+        'gross pay and tax deducted and I\'ll record them for you.',
+      );
+    }
   };
 
   const confirmExtraction = () => {

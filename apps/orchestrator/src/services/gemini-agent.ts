@@ -28,6 +28,33 @@ const VERTEX_FUNCTION_DECLARATIONS = TAX_TOOL_DEFINITIONS.map(d => ({
   parameters: toVertexSchema(d.parameters),
 }));
 
+// Coerce arbitrary client history into valid Vertex Content[]:
+//   • accepts {role, parts:[{text}]} OR {sender:'bot'|'user', text}
+//   • drops empty turns and anything that isn't user/model
+//   • Vertex requires the history to START with a user turn -> drop leading model turns
+//   • Vertex requires ALTERNATING roles -> merge consecutive same-role turns
+// A malformed history is the most common cause of a hard Vertex throw mid-chat.
+export function sanitizeHistory(history: any[]): any[] {
+  const norm: { role: string; parts: { text: string }[] }[] = [];
+  for (const h of history || []) {
+    let text = '';
+    if (Array.isArray(h?.parts)) text = h.parts.map((p: any) => p?.text || '').join('');
+    else if (typeof h?.text === 'string') text = h.text;
+    let role = h?.role || (h?.sender === 'bot' ? 'model' : h?.sender === 'user' ? 'user' : '');
+    if (role !== 'user' && role !== 'model') continue;
+    if (!text.trim()) continue;
+    norm.push({ role, parts: [{ text }] });
+  }
+  while (norm.length && norm[0].role === 'model') norm.shift();
+  const alt: typeof norm = [];
+  for (const item of norm) {
+    const last = alt[alt.length - 1];
+    if (last && last.role === item.role) last.parts.push(...item.parts);
+    else alt.push(item);
+  }
+  return alt;
+}
+
 // Data residency: model calls must stay in an approved UK/EU region (spec 9.3).
 const APPROVED_REGION_PREFIXES = ['europe-', 'eu'];
 function assertApprovedRegion(region: string) {
@@ -37,6 +64,29 @@ function assertApprovedRegion(region: string) {
       `Set GCP_REGION to an approved region (e.g. europe-west2).`,
     );
   }
+}
+
+// Retry transient Vertex failures (429/5xx/deadline) with exponential backoff.
+// This is the difference between a momentary blip and the user seeing a dead-end.
+async function sendWithRetry(chat: any, payload: any, attempts = 3): Promise<any> {
+  let lastErr: any;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await chat.sendMessage(payload);
+    } catch (err: any) {
+      lastErr = err;
+      const code = Number(err?.code || err?.status);
+      const retryable =
+        [429, 500, 502, 503, 504].includes(code) ||
+        /deadline|unavailable|timeout|timed out|ECONNRESET|socket hang up|rate limit|overloaded/i.test(err?.message || '');
+      if (i < attempts - 1 && retryable) {
+        await new Promise(r => setTimeout(r, 400 * Math.pow(2, i)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
 }
 
 // ─── GeminiAgent ─────────────────────────────────────────────────────────────
@@ -77,11 +127,11 @@ export class GeminiAgent {
           tools: [{ functionDeclarations: VERTEX_FUNCTION_DECLARATIONS as any }],
         });
 
-        const chat = model.startChat({ history: [...history] });
+        const chat = model.startChat({ history: sanitizeHistory(history) });
 
-        let response = await chat.sendMessage(message);
+        let response = await sendWithRetry(chat, message);
         let calls = (response.response.candidates?.[0]?.content?.parts || [])
-          .filter(p => (p as any).functionCall);
+          .filter((p: any) => (p as any).functionCall);
 
         // Plain agentic loop: run tools, feed results back, until no more calls.
         let attempts = 0;
@@ -99,26 +149,49 @@ export class GeminiAgent {
               },
             });
           }
-          response = await chat.sendMessage(outputs);
+          response = await sendWithRetry(chat, outputs);
           calls = (response.response.candidates?.[0]?.content?.parts || [])
-            .filter(p => (p as any).functionCall);
+            .filter((p: any) => (p as any).functionCall);
         }
 
         replyText = (response.response.candidates?.[0]?.content?.parts || [])
-          .filter(p => (p as any).text)
-          .map(p => (p as any).text)
+          .filter((p: any) => (p as any).text)
+          .map((p: any) => (p as any).text)
           .join('\n');
+
+        // Recover if the model ended on a tool call or hit the token cap with no prose.
+        if (!replyText || !replyText.trim()) {
+          const finish = response.response.candidates?.[0]?.finishReason;
+          console.warn('[Vertex] empty text reply, finishReason =', finish);
+          replyText = finish === 'MAX_TOKENS'
+            ? "I've updated the return with that. Could you give me the next detail — or ask me to compute the tax so far?"
+            : "Done — I've recorded that. What would you like to add next, or shall I compute the tax so far?";
+        }
       } catch (err: any) {
-        console.error('[Vertex AI Error]', err?.message || err);
+        // Log the real cause so residence-turn / mid-chat failures are diagnosable.
+        console.error('[Vertex AI Error]', JSON.stringify({
+          message: err?.message,
+          code: err?.code,
+          status: err?.status,
+          finishReason: err?.response?.candidates?.[0]?.finishReason,
+          promptFeedback: err?.response?.promptFeedback,
+          stack: (err?.stack || '').split('\n').slice(0, 4).join(' | '),
+        }));
         // Fail closed: no non-ZDR fallback.
-        replyText = 'The AI assistant is temporarily unavailable. Your tax computation is still running — see the computation panel.';
+        replyText = 'The AI assistant hit a temporary problem on that step. Your details are saved and the computation panel is up to date — please try sending your last message again.';
       }
     } else {
       replyText = 'The AI assistant is not configured for this environment. Your tax computation is still running — see the computation panel.';
     }
 
-    // Recompute once against the final return state so the UI panel is in sync.
-    const calculation = computeFullReturn(returnObj, config);
+    // Recompute against the final return state (guarded so a compute issue
+    // can never turn a successful chat turn into a 500).
+    let calculation: any = null;
+    try {
+      calculation = computeFullReturn(returnObj, config);
+    } catch (e: any) {
+      console.error('[Compute Error]', e?.message || e);
+    }
 
     return { reply: replyText, phase: 'active', calculation };
   }

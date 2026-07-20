@@ -22,6 +22,7 @@ interface ToolCall { name: string; args: any }
 interface Scenario {
   name: string;
   toolCalls: ToolCall[];
+  show?: boolean; // print the compute_return output for eyeballing
   // Return a list of failure strings (empty = pass). Receives the final
   // compute_return text, the mutated return, and run metrics.
   expect: (compute: string, r: Return, m: Metrics) => string[];
@@ -97,6 +98,77 @@ const SCENARIOS: Scenario[] = [
       return f; // validation-content check happens in the runner (below)
     },
   },
+  {
+    name: '£121k salary — 60% personal-allowance taper band',
+    show: true,
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'Amazon', grossPay: 121000, taxDeducted: 29310 } },
+    ],
+    expect: (compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      if (!compute.includes('reduced from £12,570.00')) f.push('PA should show as tapered/reduced at £121k');
+      if (!compute.includes('60%')) f.push('should surface the ~60% marginal-rate insight');
+      return f;
+    },
+  },
+  {
+    name: 'HICBC — £75k salary + Child Benefit',
+    show: true,
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'Globex', grossPay: 75000, taxDeducted: 17000 } },
+      { name: 'record_child_benefit', args: { childBenefitReceived: 2074, numberOfChildren: 2 } },
+    ],
+    expect: (compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      if (!compute.includes('High Income Child Benefit Charge')) f.push('HICBC should be computed and surfaced');
+      return f;
+    },
+  },
+  {
+    name: 'FIG election excludes foreign income',
+    show: true,
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'Initech', grossPay: 90000, taxDeducted: 25000 } },
+      { name: 'record_foreign_income', args: { countryCode: 'ind', incomeType: 'dividends', grossAmount: 20000, foreignTaxPaid: 3000 } },
+      { name: 'record_residence', args: { daysInUk: 200, srtResult: 'resident', domicileStatus: 'foreign_domiciled', figRegimeElected: true } },
+    ],
+    expect: (compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      // Foreign £20k should be excluded under FIG -> total income stays ~£90k.
+      if (!compute.includes('Total income: £90,000.00')) f.push('FIG should exclude the £20k foreign dividends from total income');
+      if (!compute.includes('FIG')) f.push('should note the FIG regime trade-off');
+      return f;
+    },
+  },
+  {
+    name: 'UK investment income recorded',
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'Hooli', grossPay: 40000, taxDeducted: 6000 } },
+      { name: 'record_uk_investment_income', args: { ukSavingsIncome: 3000, ukDividendIncome: 2000 } },
+    ],
+    expect: (_compute, r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      if (r.sa100?.income?.ukSavingsIncome !== 300000) f.push('UK interest not recorded correctly');
+      return f;
+    },
+  },
+  {
+    name: 'Pension what-if quantifies the 60% band saving (£121k)',
+    show: true,
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'Amazon', grossPay: 121000, taxDeducted: 29310 } },
+      { name: 'compare_pension_contribution', args: { contributionAmount: 21000 } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f; // pension-output check happens in the runner
+    },
+  },
 ];
 
 // ─── Runner ──────────────────────────────────────────────────────────────────
@@ -111,17 +183,25 @@ function runEval() {
     const r = freshReturn();
     const m: Metrics = { toolCalls: 0, toolErrors: 0 };
     let lastValidation = '';
+    let lastPension = '';
     for (const c of s.toolCalls) {
       const res = executeTaxTool(c.name, c.args, { returnObj: r });
       m.toolCalls++;
       if (res.isError) m.toolErrors++;
       if (c.name === 'validate_return') lastValidation = res.content;
+      if (c.name === 'compare_pension_contribution') lastPension = res.content;
     }
     const compute = executeTaxTool('compute_return', {}, { returnObj: r }).content;
+    if (s.show) console.log('\n  ── compute_return output ──\n' + compute.split('\n').map(l => '  ' + l).join('\n') + '\n');
+    if (s.show && lastPension) console.log('  ── compare_pension_contribution output ──\n' + lastPension.split('\n').map(l => '  ' + l).join('\n') + '\n');
     const failures = s.expect(compute, r, m);
     // Extra check for the validation scenario.
     if (s.name.startsWith('Validation') && !/blocking issue/i.test(lastValidation)) {
       failures.push('validate_return should have flagged blocking issues');
+    }
+    // Extra check for the pension what-if scenario.
+    if (s.name.startsWith('Pension') && !/Tax saved/.test(lastPension)) {
+      failures.push('compare_pension_contribution should report a tax saving');
     }
 
     totalCalls += m.toolCalls;

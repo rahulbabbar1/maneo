@@ -21,6 +21,8 @@ export interface FullReturnComputation {
   cgt?: CgtResult;
   ftcr?: FtcrResult;
   charges: ReliefsChargesResult;
+  adjustedNetIncome: number;
+  totalIncome: number;
   taxAlreadyPaidTotal: number;
   balancingPayment: number;
   paymentsOnAccountRequired: boolean;
@@ -61,7 +63,7 @@ export function computeFullReturn(
       warnings.push('Split-year treatment is simplified: the full year is treated as resident. Verify the split-year case and apportionment.');
     }
     if (figElected) {
-      warnings.push('FIG regime: qualifying foreign income is excluded, but loss of personal allowance / annual exempt amount for FIG claimants is not yet modelled. Verify eligibility (non-resident for the prior 10 years) upstream.');
+      warnings.push('FIG regime: qualifying foreign income is excluded and the personal allowance is withdrawn. The CGT annual exempt amount withdrawal is not yet modelled. Verify eligibility (non-resident for the prior 10 years) upstream.');
     }
     if (rs.overseasWorkdayReliefClaimed) {
       warnings.push('Overseas Workday Relief is recorded but not yet applied to the computation.');
@@ -114,6 +116,7 @@ export function computeFullReturn(
       blindPersonsAllowanceClaimed: reliefs.blindPersonsAllowance || false,
       marriageAllowanceTransferor: reliefs.marriageAllowanceTransferor || false,
       marriageAllowanceRecipient: reliefs.marriageAllowanceRecipient || false,
+      personalAllowanceForfeited: figElected, // FIG claimants forfeit the PA
     },
     config
   );
@@ -214,6 +217,8 @@ export function computeFullReturn(
     cgt: cgtOutput,
     ftcr: ftcrOutput,
     charges,
+    adjustedNetIncome,
+    totalIncome: nonSavingsIncome + savingsIncome + dividendIncome,
     taxAlreadyPaidTotal,
     balancingPayment,
     paymentsOnAccountRequired,

@@ -6,9 +6,11 @@ import { getConfig } from '@uk-sa-app/tax-config';
 import { Return } from '@uk-sa-app/return-model';
 import { PiiScrubber } from './services/pii-scrubber.js';
 import { GeminiAgent } from './services/gemini-agent.js';
+import { extractTaxDocument } from './services/document-extractor.js';
 import { PhaseKey } from './services/state-machine.js';
 
-const fastify = Fastify({ logger: true });
+// bodyLimit raised to 15MB so P60 photos / PDFs fit in the extract endpoint.
+const fastify = Fastify({ logger: true, bodyLimit: 15 * 1024 * 1024 });
 
 // ── CORS: explicit allowlist only, never "*" ─────────────────────────────────
 // Set ALLOWED_ORIGINS as a comma-separated list in the environment.
@@ -114,6 +116,22 @@ fastify.post('/api/chat', { preHandler: verifyAuth }, async (request, reply) => 
   } catch (err: any) {
     reply.status(500);
     return { status: 'error', message: err.message || 'Agent chat processing error' };
+  }
+});
+
+// 4. Document extraction endpoint — real P60/P45 reader (classifies + extracts).
+fastify.post('/api/extract-document', { preHandler: verifyAuth }, async (request, reply) => {
+  const { fileBase64, mimeType } = request.body as { fileBase64?: string; mimeType?: string };
+  if (!fileBase64 || !mimeType) {
+    reply.status(400);
+    return { status: 'error', message: 'Missing fileBase64 or mimeType.' };
+  }
+  try {
+    const extraction = await extractTaxDocument(project, region, fileBase64, mimeType);
+    return { status: 'success', extraction };
+  } catch (err: any) {
+    reply.status(500);
+    return { status: 'error', message: err?.message || 'Extraction error' };
   }
 });
 
