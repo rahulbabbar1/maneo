@@ -12,6 +12,7 @@ COPY apps/hmrc-integration/package*.json ./apps/hmrc-integration/
 COPY packages/return-model/package*.json ./packages/return-model/
 COPY packages/tax-config/package*.json ./packages/tax-config/
 COPY packages/tax-core/package*.json ./packages/tax-core/
+COPY packages/knowledge/package*.json ./packages/knowledge/
 COPY packages/mcp-servers/package*.json ./packages/mcp-servers/
 COPY packages/hmrc-artefacts/package*.json ./packages/hmrc-artefacts/
 
@@ -26,6 +27,7 @@ COPY apps/orchestrator/ ./apps/orchestrator/
 RUN npm run build --workspace @uk-sa-app/return-model
 RUN npm run build --workspace @uk-sa-app/tax-config
 RUN npm run build --workspace @uk-sa-app/tax-core
+RUN npm run build --workspace @uk-sa-app/knowledge
 RUN npm run build --workspace @uk-sa-app/orchestrator
 
 # Second stage: production container
@@ -43,6 +45,7 @@ COPY apps/hmrc-integration/package*.json ./apps/hmrc-integration/
 COPY packages/return-model/package*.json ./packages/return-model/
 COPY packages/tax-config/package*.json ./packages/tax-config/
 COPY packages/tax-core/package*.json ./packages/tax-core/
+COPY packages/knowledge/package*.json ./packages/knowledge/
 COPY packages/mcp-servers/package*.json ./packages/mcp-servers/
 COPY packages/hmrc-artefacts/package*.json ./packages/hmrc-artefacts/
 
@@ -53,6 +56,7 @@ RUN npm ci --omit=dev
 COPY --from=builder /usr/src/app/packages/return-model/dist ./packages/return-model/dist
 COPY --from=builder /usr/src/app/packages/tax-config/dist ./packages/tax-config/dist
 COPY --from=builder /usr/src/app/packages/tax-core/dist ./packages/tax-core/dist
+COPY --from=builder /usr/src/app/packages/knowledge/dist ./packages/knowledge/dist
 COPY --from=builder /usr/src/app/apps/orchestrator/dist ./apps/orchestrator/dist
 
 EXPOSE 3001
