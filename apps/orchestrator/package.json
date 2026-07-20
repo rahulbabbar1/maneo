@@ -18,6 +18,7 @@
     "@uk-sa-app/return-model": "*",
     "@uk-sa-app/tax-config": "*",
     "@uk-sa-app/tax-core": "*",
+    "@uk-sa-app/knowledge": "*",
     "@modelcontextprotocol/sdk": "^1.0.1"
   }
 }

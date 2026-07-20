@@ -4,6 +4,9 @@ import { getConfig, CONFIGS } from '@uk-sa-app/tax-config';
 import { Return } from '@uk-sa-app/return-model';
 import { PromptBuilder } from './prompt-builder.js';
 import { TAX_TOOL_DEFINITIONS, executeTaxTool } from './tax-tools.js';
+import { enforceFigureGuardrail } from './guardrail.js';
+import { validateReturnProvenance } from './provenance-guard.js';
+
 
 // ─── Model-agnostic tool defs → Vertex schema shape ──────────────────────────
 // Recursively upper-cases JSON-schema "type" values to the Vertex SchemaType
@@ -193,6 +196,21 @@ export class GeminiAgent {
       console.error('[Compute Error]', e?.message || e);
     }
 
+    // C5 Safety Net Enforcement:
+    // 1. Redact unverified monetary figures from model prose
+    const guarded = enforceFigureGuardrail(replyText, calculation, returnObj, config);
+    if (guarded.redacted) {
+      console.warn('[Safety Net C5] Redacted unverified monetary figure(s) from model reply.');
+    }
+    replyText = guarded.text;
+
+    // 2. Assert return & calculation provenance
+    const provenance = validateReturnProvenance(returnObj, calculation);
+    if (!provenance.valid) {
+      console.warn('[Safety Net C5] Provenance warning(s):', provenance.violations.join('; '));
+    }
+
     return { reply: replyText, phase: 'active', calculation };
   }
 }
+

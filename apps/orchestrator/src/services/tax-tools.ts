@@ -18,6 +18,8 @@ import {
   ForeignIncomeItemSchema,
   SA109Schema,
 } from '@uk-sa-app/return-model';
+import { searchHmrcGuidance } from '@uk-sa-app/knowledge';
+
 
 const gbp = (pence: number) =>
   `£${(pence / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -177,6 +179,18 @@ export const TAX_TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'search_hmrc_guidance',
+    description:
+      'Searches the grounded HMRC authority database (SA109/SA106 technical guidance, DTA conventions, FIG 4-year rules, and MTR calculation methodology) and returns citable passages. Use this tool whenever the user asks technical tax questions or when verifying statutory eligibility before recording claims.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Technical tax query or rule topic, e.g. "UK India dividend treaty cap" or "FIG regime 4 year eligibility"' },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'validate_return',
     description:
       'Checks whether the return is complete enough to submit and flags blocking issues, missing items, and HMRC online-filing exclusions relevant to foreign-national returns. Call before declaring/submitting.',
@@ -197,6 +211,15 @@ export function executeTaxTool(
 
   try {
     switch (name) {
+      case 'search_hmrc_guidance': {
+        const res = searchHmrcGuidance(args.query || '');
+        if (!res.found) {
+          return { content: `No grounded HMRC guidance found for query "${args.query}". Explicitly inform the user that no authority was found in the official corpus rather than guessing.` };
+        }
+        const passages = res.passages.map((p: { citation: string; excerpt: string }, i: number) => `${i + 1}. ${p.citation}\n"${p.excerpt}"`).join('\n\n');
+        return { content: `Grounded HMRC Guidance for "${args.query}":\n\n${passages}\n\nQuote and cite these exact source references in your response to the user.` };
+      }
+
       case 'get_return_context':
         return { content: describeReturn(r) };
 

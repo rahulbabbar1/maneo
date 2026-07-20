@@ -157,6 +157,18 @@ const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: 'HMRC Grounding Layer (C1) — citable guidance retrieval',
+    show: true,
+    toolCalls: [
+      { name: 'search_hmrc_guidance', args: { query: 'UK India dividend treaty cap' } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
+  {
     name: 'Pension what-if quantifies the 60% band saving (£121k)',
     show: true,
     toolCalls: [
