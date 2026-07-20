@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "node dist/test-tax-tools.js && node dist/test-pii.js",
+    "test": "node dist/test-tax-tools.js && node dist/test-pii.js && node dist/test-safety-net.js && node dist/eval-agent.js",
     "eval": "node dist/eval-agent.js"
   },
   "dependencies": {
@@ -18,7 +18,6 @@
     "@uk-sa-app/return-model": "*",
     "@uk-sa-app/tax-config": "*",
     "@uk-sa-app/tax-core": "*",
-    "@uk-sa-app/knowledge": "*",
-    "@modelcontextprotocol/sdk": "^1.0.1"
+    "@uk-sa-app/knowledge": "*"
   }
 }

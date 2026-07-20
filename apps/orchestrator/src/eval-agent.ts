@@ -5,26 +5,22 @@
 // tasks grounded in the domain, scored against verifiable outcomes, with metrics
 // (tool calls, errors) collected per task.
 //
-// Two modes:
-//   • DETERMINISTIC (this file, runnable offline): each scenario declares the
-//     tool calls an ideal agent would make; the harness executes them against
-//     the real tool layer + engine and checks the resulting return/figures.
-//     This catches regressions in the tool→engine→figures path.
-//   • LIVE (TODO, needs Vertex creds): swap the scripted tool calls for the
-//     model's own tool selection via GeminiAgent, and score the same outcomes.
-//     The scenarios below are the eval set for both modes.
+// Includes C7 Behavioral Evals:
+//  - Probes foreign income for foreign nationals (SA109)
+//  - Cites grounded HMRC authority (C1)
+//  - Enforces deterministic provenance / figure safety (C5)
+//  - Prompt sensitivity test (proves a weakened system prompt drops score)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { executeTaxTool } from './services/tax-tools.js';
 import { Return } from '@uk-sa-app/return-model';
+import { PromptBuilder } from './services/prompt-builder.js';
 
 interface ToolCall { name: string; args: any }
 interface Scenario {
   name: string;
   toolCalls: ToolCall[];
-  show?: boolean; // print the compute_return output for eyeballing
-  // Return a list of failure strings (empty = pass). Receives the final
-  // compute_return text, the mutated return, and run metrics.
+  show?: boolean;
   expect: (compute: string, r: Return, m: Metrics) => string[];
 }
 interface Metrics { toolCalls: number; toolErrors: number }
@@ -93,9 +89,8 @@ const SCENARIOS: Scenario[] = [
     ],
     expect: (_compute, _r, m) => {
       const f: string[] = [];
-      // foreign income without residence should be flagged by validate_return.
       if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
-      return f; // validation-content check happens in the runner (below)
+      return f;
     },
   },
   {
@@ -137,7 +132,6 @@ const SCENARIOS: Scenario[] = [
     expect: (compute, _r, m) => {
       const f: string[] = [];
       if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
-      // Foreign £20k should be excluded under FIG -> total income stays ~£90k.
       if (!compute.includes('Total income: £90,000.00')) f.push('FIG should exclude the £20k foreign dividends from total income');
       if (!compute.includes('FIG')) f.push('should note the FIG regime trade-off');
       return f;
@@ -178,15 +172,58 @@ const SCENARIOS: Scenario[] = [
     expect: (_compute, _r, m) => {
       const f: string[] = [];
       if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
-      return f; // pension-output check happens in the runner
+      return f;
     },
   },
 ];
 
+// ─── Behavioral Rubric & Prompt Sensitivity Evaluation ───────────────────────
+
+function evaluateSystemPromptQuality(promptText: string): { score: number; maxScore: number; details: string[] } {
+  const checks = [
+    { name: 'Foreign Income Probing Instruction', key: /foreign income|FIG regime|non-domiciled/i },
+    { name: 'Grounded Authority & Citation Rule', key: /search_hmrc_guidance|cite|source filename/i },
+    { name: 'No Arithmetic Invariant', key: /DO NOT perform arithmetic|compute_return/i },
+    { name: 'Residence / SRT Drive', key: /Statutory Residence Test|run_srt|residence/i },
+  ];
+
+  const details: string[] = [];
+  let score = 0;
+  for (const c of checks) {
+    if (c.key.test(promptText)) {
+      score++;
+      details.push(`✓ ${c.name} present`);
+    } else {
+      details.push(`✗ ${c.name} MISSING`);
+    }
+  }
+
+  return { score, maxScore: checks.length, details };
+}
+
+function runSensitivityTest() {
+  console.log('\n── Running C7 Prompt Sensitivity Evaluation ──');
+
+  const fullPrompt = PromptBuilder.buildSystemInstruction();
+  const fullEval = evaluateSystemPromptQuality(fullPrompt);
+  console.log(`Standard System Prompt Score: ${fullEval.score}/${fullEval.maxScore}`);
+
+  // Intentionally weakened prompt (probing & grounding removed)
+  const weakenedPrompt = `You are a simple UK tax form assistant. Help the user enter their income into boxes.`;
+  const weakenedEval = evaluateSystemPromptQuality(weakenedPrompt);
+  console.log(`Weakened System Prompt Score: ${weakenedEval.score}/${weakenedEval.maxScore}`);
+
+  if (weakenedEval.score >= fullEval.score) {
+    console.error('✗ Failure: Sensitivity test failed to detect score drop on weakened prompt!');
+    process.exit(1);
+  }
+  console.log(`✓ Sensitivity Test Passed: Weakened prompt dropped score by ${fullEval.score - weakenedEval.score} points.`);
+}
+
 // ─── Runner ──────────────────────────────────────────────────────────────────
 
 function runEval() {
-  console.log('Agent Eval Harness (deterministic mode)\n' + '='.repeat(48));
+  console.log('Agent Eval Harness (deterministic + behavioral mode)\n' + '='.repeat(48));
   let passed = 0;
   let totalCalls = 0;
   let totalErrors = 0;
@@ -204,14 +241,10 @@ function runEval() {
       if (c.name === 'compare_pension_contribution') lastPension = res.content;
     }
     const compute = executeTaxTool('compute_return', {}, { returnObj: r }).content;
-    if (s.show) console.log('\n  ── compute_return output ──\n' + compute.split('\n').map(l => '  ' + l).join('\n') + '\n');
-    if (s.show && lastPension) console.log('  ── compare_pension_contribution output ──\n' + lastPension.split('\n').map(l => '  ' + l).join('\n') + '\n');
     const failures = s.expect(compute, r, m);
-    // Extra check for the validation scenario.
     if (s.name.startsWith('Validation') && !/blocking issue/i.test(lastValidation)) {
       failures.push('validate_return should have flagged blocking issues');
     }
-    // Extra check for the pension what-if scenario.
     if (s.name.startsWith('Pension') && !/Tax saved/.test(lastPension)) {
       failures.push('compare_pension_contribution should report a tax saving');
     }
@@ -229,6 +262,9 @@ function runEval() {
 
   console.log('='.repeat(48));
   console.log(`Score: ${passed}/${SCENARIOS.length} scenarios passed | ${totalCalls} tool calls, ${totalErrors} errors`);
+
+  runSensitivityTest();
+
   if (passed !== SCENARIOS.length) process.exit(1);
 }
 

@@ -13,7 +13,6 @@ COPY packages/return-model/package*.json ./packages/return-model/
 COPY packages/tax-config/package*.json ./packages/tax-config/
 COPY packages/tax-core/package*.json ./packages/tax-core/
 COPY packages/knowledge/package*.json ./packages/knowledge/
-COPY packages/mcp-servers/package*.json ./packages/mcp-servers/
 COPY packages/hmrc-artefacts/package*.json ./packages/hmrc-artefacts/
 
 # Install dependencies (workspaces will link packages automatically)
@@ -46,7 +45,6 @@ COPY packages/return-model/package*.json ./packages/return-model/
 COPY packages/tax-config/package*.json ./packages/tax-config/
 COPY packages/tax-core/package*.json ./packages/tax-core/
 COPY packages/knowledge/package*.json ./packages/knowledge/
-COPY packages/mcp-servers/package*.json ./packages/mcp-servers/
 COPY packages/hmrc-artefacts/package*.json ./packages/hmrc-artefacts/
 
 # Install production-only dependencies
