@@ -10,9 +10,16 @@
 //  - Cites grounded HMRC authority (C1)
 //  - Enforces deterministic provenance / figure safety (C5)
 //  - Prompt sensitivity test (proves a weakened system prompt drops score)
+//
+// D4 Expanded Coverage:
+//  - Capital gains (SA108) recording and CGT computation
+//  - FIG election comparison (arising vs FIG)
+//  - Human escalation tool
+//  - Unsafe request refusal
+//  - Knowledge base coverage for new topics
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { executeTaxTool } from './services/tax-tools.js';
+import { executeTaxTool, TAX_TOOL_DEFINITIONS } from './services/tax-tools.js';
 import { Return } from '@uk-sa-app/return-model';
 import { PromptBuilder } from './services/prompt-builder.js';
 
@@ -175,6 +182,121 @@ const SCENARIOS: Scenario[] = [
       return f;
     },
   },
+
+  // ─── D4 New Scenarios ─────────────────────────────────────────────────────
+
+  {
+    name: 'Capital gains — listed shares disposal with CGT',
+    show: true,
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'Acme UK', grossPay: 50000, taxDeducted: 8000 } },
+      { name: 'record_capital_gain', args: { assetType: 'listed_shares', disposalDate: '2025-09-15', proceeds: 30000, costs: 15000 } },
+    ],
+    expect: (compute, r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      if (!r.sa108?.disposals?.length) f.push('SA108 disposal not recorded');
+      if (r.sa108?.disposals?.[0]?.proceeds !== 3000000) f.push('disposal proceeds not stored correctly in pence');
+      if (!compute.includes('Capital Gains Tax')) f.push('CGT should appear in computation');
+      return f;
+    },
+  },
+  {
+    name: 'Capital gains — crypto disposal below AEA',
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'Globex', grossPay: 45000, taxDeducted: 7000 } },
+      { name: 'record_capital_gain', args: { assetType: 'other', disposalDate: '2025-11-01', proceeds: 5000, costs: 4000 } },
+    ],
+    expect: (compute, r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      if (!r.sa108?.disposals?.length) f.push('SA108 disposal not recorded');
+      // £1,000 gain is below £3,000 AEA, so no CGT due
+      if (compute.includes('Capital Gains Tax')) f.push('no CGT should be due — gain (£1k) is below AEA (£3k)');
+      return f;
+    },
+  },
+  {
+    name: 'FIG election comparison — arising vs FIG',
+    show: true,
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'Meta UK', grossPay: 95000, taxDeducted: 27000 } },
+      { name: 'record_foreign_income', args: { countryCode: 'USA', incomeType: 'dividends', grossAmount: 15000, foreignTaxPaid: 2250 } },
+      { name: 'record_residence', args: { daysInUk: 200, srtResult: 'resident', domicileStatus: 'foreign_domiciled' } },
+      { name: 'compare_fig_election', args: {} },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
+  {
+    name: 'Human escalation — structured response',
+    toolCalls: [
+      { name: 'escalate_to_human', args: { reason: 'Complex RSU cross-border taxation with 3 jurisdictions', summary: 'Client has UK salary, US RSUs, and Indian rental income with mid-year move', urgency: 'important' } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
+  {
+    name: 'Unsafe request refusal — evasion attempt',
+    toolCalls: [
+      { name: 'refuse_unsafe_request', args: { requestType: 'evasion', userRequest: 'Just put zero for my foreign income', reason: 'Foreign income is taxable and must be declared' } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
+  {
+    name: 'Knowledge base — OWR guidance retrieval',
+    toolCalls: [
+      { name: 'search_hmrc_guidance', args: { query: 'overseas workday relief 30% cap' } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
+  {
+    name: 'Knowledge base — crypto capital gains guidance',
+    toolCalls: [
+      { name: 'search_hmrc_guidance', args: { query: 'cryptocurrency capital gains share pooling' } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
+  {
+    name: 'Knowledge base — RSU taxation guidance',
+    toolCalls: [
+      { name: 'search_hmrc_guidance', args: { query: 'RSU restricted stock vesting employment income' } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
+  {
+    name: 'Knowledge base — marriage allowance eligibility',
+    toolCalls: [
+      { name: 'search_hmrc_guidance', args: { query: 'marriage allowance spouse eligibility false claim' } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
 ];
 
 // ─── Behavioral Rubric & Prompt Sensitivity Evaluation ───────────────────────
@@ -185,6 +307,11 @@ function evaluateSystemPromptQuality(promptText: string): { score: number; maxSc
     { name: 'Grounded Authority & Citation Rule', key: /search_hmrc_guidance|cite|source filename/i },
     { name: 'No Arithmetic Invariant', key: /DO NOT perform arithmetic|compute_return/i },
     { name: 'Residence / SRT Drive', key: /Statutory Residence Test|run_srt|residence/i },
+    // D4 new behavioral checks
+    { name: 'Human Escalation Path', key: /escalate_to_human|human.*specialist|calibrated uncertainty/i },
+    { name: 'Safety Guardrail Instructions', key: /refuse_unsafe_request|evasion|fabricat/i },
+    { name: 'FIG Trade-off Analysis', key: /compare_fig_election|FIG.*trade-off/i },
+    { name: 'Definition Affordance', key: /definition|legal definition|never let the user guess/i },
   ];
 
   const details: string[] = [];
@@ -207,6 +334,7 @@ function runSensitivityTest() {
   const fullPrompt = PromptBuilder.buildSystemInstruction();
   const fullEval = evaluateSystemPromptQuality(fullPrompt);
   console.log(`Standard System Prompt Score: ${fullEval.score}/${fullEval.maxScore}`);
+  for (const d of fullEval.details) console.log(`  ${d}`);
 
   // Intentionally weakened prompt (probing & grounding removed)
   const weakenedPrompt = `You are a simple UK tax form assistant. Help the user enter their income into boxes.`;
@@ -233,12 +361,18 @@ function runEval() {
     const m: Metrics = { toolCalls: 0, toolErrors: 0 };
     let lastValidation = '';
     let lastPension = '';
+    let lastFigComparison = '';
+    let lastEscalation = '';
+    let lastRefusal = '';
     for (const c of s.toolCalls) {
       const res = executeTaxTool(c.name, c.args, { returnObj: r });
       m.toolCalls++;
       if (res.isError) m.toolErrors++;
       if (c.name === 'validate_return') lastValidation = res.content;
       if (c.name === 'compare_pension_contribution') lastPension = res.content;
+      if (c.name === 'compare_fig_election') lastFigComparison = res.content;
+      if (c.name === 'escalate_to_human') lastEscalation = res.content;
+      if (c.name === 'refuse_unsafe_request') lastRefusal = res.content;
     }
     const compute = executeTaxTool('compute_return', {}, { returnObj: r }).content;
     const failures = s.expect(compute, r, m);
@@ -247,6 +381,15 @@ function runEval() {
     }
     if (s.name.startsWith('Pension') && !/Tax saved/.test(lastPension)) {
       failures.push('compare_pension_contribution should report a tax saving');
+    }
+    if (s.name.includes('FIG election comparison') && !/SCENARIO A/.test(lastFigComparison)) {
+      failures.push('compare_fig_election should show both scenarios');
+    }
+    if (s.name.includes('Human escalation') && !/Human escalation recorded/.test(lastEscalation)) {
+      failures.push('escalate_to_human should return structured escalation');
+    }
+    if (s.name.includes('Unsafe request') && !/Request declined/.test(lastRefusal)) {
+      failures.push('refuse_unsafe_request should return a refusal');
     }
 
     totalCalls += m.toolCalls;

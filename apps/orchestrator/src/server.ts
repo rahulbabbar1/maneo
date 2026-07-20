@@ -1,19 +1,19 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import admin from 'firebase-admin';
-import { computeFullReturn } from '@uk-sa-app/tax-core';
+import { computeFullReturn, FullReturnComputation } from '@uk-sa-app/tax-core';
 import { getConfig } from '@uk-sa-app/tax-config';
 import { Return } from '@uk-sa-app/return-model';
 import { PiiScrubber } from './services/pii-scrubber.js';
 import { GeminiAgent } from './services/gemini-agent.js';
-import { extractTaxDocument } from './services/document-extractor.js';
-import { PhaseKey } from './services/state-machine.js';
+import { extractTaxDocument, extractMultipleDocuments } from './services/document-extractor.js';
+import { generateTaxReturnPdf } from './services/pdf-generator.js';
+import { FilingPhase } from './services/filing-state.js';
 
-// bodyLimit raised to 15MB so P60 photos / PDFs fit in the extract endpoint.
-const fastify = Fastify({ logger: true, bodyLimit: 15 * 1024 * 1024 });
+// bodyLimit raised to 25MB to accommodate multi-file uploads / ZIP files / multi-page PDFs
+const fastify = Fastify({ logger: true, bodyLimit: 25 * 1024 * 1024 });
 
-// ── CORS: explicit allowlist only, never "*" ─────────────────────────────────
-// Set ALLOWED_ORIGINS as a comma-separated list in the environment.
+// ── CORS: explicit allowlist only ──────────────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
   'http://localhost:5173,http://localhost:3000,https://maneo.web.app,https://uk-self-assessment.web.app')
   .split(',')
@@ -25,9 +25,7 @@ await fastify.register(cors, {
   credentials: true,
 });
 
-// ── Firebase Admin: verify caller identity on every protected route ──────────
-// Uses Application Default Credentials on Cloud Run. Set FIREBASE_PROJECT_ID or
-// rely on ADC project resolution.
+// ── Firebase Admin: verify caller identity ───────────────────────────────────
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -41,7 +39,7 @@ async function verifyAuth(request: any, reply: any) {
   const idToken = header.slice('Bearer '.length).trim();
   try {
     const decoded = await admin.auth().verifyIdToken(idToken);
-    request.user = decoded; // includes uid and any custom role claims
+    request.user = decoded;
   } catch (err: any) {
     reply.code(401);
     throw new Error('Invalid or expired ID token');
@@ -51,8 +49,7 @@ async function verifyAuth(request: any, reply: any) {
 const project = process.env.GCP_PROJECT || 'uk-self-assessment';
 const region = process.env.GCP_REGION || 'europe-west2';
 
-// 1. Health check endpoint (public). Reports configured values only; it does not
-//    assert compliance guarantees it cannot verify at runtime.
+// 1. Health check endpoint (public)
 fastify.get('/api/health', async () => {
   return {
     status: 'healthy',
@@ -61,7 +58,7 @@ fastify.get('/api/health', async () => {
   };
 });
 
-// 2. Direct tax calculation endpoint (used by UI for instant updates)
+// 2. Direct tax calculation endpoint
 fastify.post('/api/calculate', { preHandler: verifyAuth }, async (request, reply) => {
   const { returnObj, taxYear } = request.body as { returnObj: Return; taxYear: string };
   try {
@@ -80,15 +77,13 @@ fastify.post('/api/chat', { preHandler: verifyAuth }, async (request, reply) => 
     message: string;
     returnObj: Return;
     taxYear: string;
-    phase?: PhaseKey;
+    phase?: FilingPhase;
     history?: any[];
   };
 
   try {
-    // A. Initialize PII Scrubber
     const scrubber = new PiiScrubber();
 
-    // Register terms to prevent leakage
     if (returnObj.clientId) scrubber.registerTerm(returnObj.clientId, 'CLIENT');
     if (Array.isArray(returnObj.sa102)) {
       for (const emp of returnObj.sa102) {
@@ -97,15 +92,12 @@ fastify.post('/api/chat', { preHandler: verifyAuth }, async (request, reply) => 
       }
     }
 
-    // Scrub incoming message
     const scrubbedMessage = scrubber.scrub(message);
     fastify.log.info(`Scrubbed incoming message: "${scrubbedMessage}"`);
 
-    // B. Initialize/Call Gemini Agent Loop
     const agent = new GeminiAgent(project, region, phase);
     const turnResult = await agent.runConversationTurn(scrubbedMessage, returnObj, history);
 
-    // C. Unscrub reply to restore user-specific names
     const finalReply = scrubber.unscrub(turnResult.reply);
 
     return {
@@ -119,19 +111,60 @@ fastify.post('/api/chat', { preHandler: verifyAuth }, async (request, reply) => 
   }
 });
 
-// 4. Document extraction endpoint — real P60/P45 reader (classifies + extracts).
+// 4. Document extraction endpoint (single or batch multi-file upload)
 fastify.post('/api/extract-document', { preHandler: verifyAuth }, async (request, reply) => {
-  const { fileBase64, mimeType } = request.body as { fileBase64?: string; mimeType?: string };
-  if (!fileBase64 || !mimeType) {
-    reply.status(400);
-    return { status: 'error', message: 'Missing fileBase64 or mimeType.' };
-  }
+  const body = request.body as {
+    fileBase64?: string;
+    mimeType?: string;
+    fileName?: string;
+    files?: Array<{ fileBase64: string; mimeType: string; fileName?: string }>;
+  };
+
   try {
-    const extraction = await extractTaxDocument(project, region, fileBase64, mimeType);
-    return { status: 'success', extraction };
+    if (body.files && Array.isArray(body.files) && body.files.length > 0) {
+      const extractions = await extractMultipleDocuments(project, region, body.files);
+      return { status: 'success', extractions, isBatch: true };
+    }
+
+    if (!body.fileBase64 || !body.mimeType) {
+      reply.status(400);
+      return { status: 'error', message: 'Missing fileBase64 or mimeType.' };
+    }
+
+    const extraction = await extractTaxDocument(project, region, body.fileBase64, body.mimeType, body.fileName);
+    return { status: 'success', extraction, isBatch: false };
   } catch (err: any) {
     reply.status(500);
     return { status: 'error', message: err?.message || 'Extraction error' };
+  }
+});
+
+// 5. Final Return PDF Generation endpoint
+fastify.post('/api/generate-pdf', { preHandler: verifyAuth }, async (request, reply) => {
+  const { returnObj, calculation } = request.body as { returnObj: Return; calculation?: FullReturnComputation };
+  if (!returnObj) {
+    reply.status(400);
+    return { status: 'error', message: 'Missing returnObj in request body.' };
+  }
+
+  try {
+    // If calculation wasn't passed in, compute it locally
+    let calc = calculation;
+    if (!calc) {
+      const config = getConfig(returnObj.taxYear || '2025-26');
+      calc = computeFullReturn(returnObj, config);
+    }
+
+    const pdfBuffer = generateTaxReturnPdf(returnObj, calc);
+    const taxYear = returnObj.taxYear || '2025-26';
+
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="Tax_Return_${taxYear}_${returnObj.clientId || 'SA100'}.pdf"`)
+      .send(pdfBuffer);
+  } catch (err: any) {
+    reply.status(500);
+    return { status: 'error', message: err?.message || 'PDF generation error' };
   }
 });
 

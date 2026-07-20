@@ -242,15 +242,17 @@ export default function App() {
   };
 
   // File Upload — sends the real document to the extractor; never fabricates data.
+  // Multi-file Upload — sends uploaded document(s) (OCR images, PDFs, XLSX, ZIP) to extractor
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = ''; // allow re-uploading the same file later
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0) return;
+    e.target.value = ''; // allow re-uploading later
 
+    const fileNames = files.map(f => f.name).join(', ');
     addMessageToActiveSession({
       id: Date.now().toString(),
       sender: 'user',
-      text: `📎 Uploaded: ${file.name}`,
+      text: `📎 Uploaded ${files.length} file(s): ${fileNames}`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
     setIsTyping(true);
@@ -264,44 +266,94 @@ export default function App() {
       });
 
     try {
-      const fileBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
-        reader.onerror = () => reject(new Error('read failed'));
-        reader.readAsDataURL(file);
-      });
+      const filePayloads = await Promise.all(
+        files.map(async (file) => {
+          const fileBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+            reader.onerror = () => reject(new Error('read failed'));
+            reader.readAsDataURL(file);
+          });
+          return {
+            fileBase64,
+            mimeType: file.type || 'application/octet-stream',
+            fileName: file.name,
+          };
+        })
+      );
 
       const headers = await authHeaders();
       const response = await fetch(`${API_BASE}/api/extract-document`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/octet-stream' }),
+        body: JSON.stringify({ files: filePayloads }),
       });
       const data = await response.json();
       setIsTyping(false);
 
-      const ex = data?.extraction;
-      if (response.ok && data?.status === 'success' && ex?.isP60 && ex.grossPay != null) {
-        setExtractedData({
-          employerName: ex.employerName || 'Unknown employer',
-          employerRef: ex.employerRef || '',
-          grossPay: ex.grossPay,
-          taxDeducted: ex.taxDeducted ?? 0,
-        });
-        setShowExtractionModal(true);
+      if (response.ok && data?.status === 'success') {
+        const extractions: any[] = data.extractions || [data.extraction];
+        let p60Found = false;
+
+        for (const ex of extractions) {
+          if (ex?.isP60 && ex.grossPay != null) {
+            p60Found = true;
+            setExtractedData({
+              employerName: ex.employerName || 'Unknown employer',
+              employerRef: ex.employerRef || '',
+              grossPay: ex.grossPay,
+              taxDeducted: ex.taxDeducted ?? 0,
+            });
+            setShowExtractionModal(true);
+          } else {
+            const kind = ex?.documentType || 'an unrecognised document';
+            const fName = ex?.fileName ? ` (${ex.fileName})` : '';
+            botSay(
+              `Processed${fName}: Classified as **${kind}**. ${ex?.message || 'Details extracted into your return state.'}`
+            );
+          }
+        }
+        if (!p60Found && extractions.length === 1) {
+          // Message already logged above
+        }
       } else {
-        const kind = ex?.documentType || 'an unrecognised document';
-        botSay(
-          `I couldn't use that as a P60 — it looks like ${kind}. Please upload your P60 or P45, ` +
-          `or just tell me your employer, gross pay and tax deducted and I'll record them directly.`,
-        );
+        botSay("I couldn't process those documents. Please upload valid tax files or enter figures manually.");
       }
     } catch (err) {
       setIsTyping(false);
       botSay(
-        "Sorry, I couldn't read that document. You can try again, or tell me your employer, " +
-        'gross pay and tax deducted and I\'ll record them for you.',
+        "Sorry, I ran into an error reading those files. You can try again or enter the details manually."
       );
+    }
+  };
+
+  // Download Final Return PDF from backend
+  const handleDownloadPdf = async () => {
+    if (!activeSession) return;
+    try {
+      const headers = await authHeaders();
+      const response = await fetch(`${API_BASE}/api/generate-pdf`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          returnObj: activeSession.returnObj,
+          calculation: activeSession.computation,
+        }),
+      });
+
+      if (!response.ok) throw new Error('PDF generation failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Tax_Return_${activeSession.returnObj?.taxYear || '2025-26'}_${activeSession.returnObj?.clientId || 'SA100'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      alert('Could not generate PDF: ' + (err.message || 'Server error'));
     }
   };
 
@@ -454,6 +506,17 @@ export default function App() {
               ) : (
                 <span className="badge badge-success"><span className="badge-dot"></span>HMRC v1.0</span>
               )}
+              <button
+                className="theme-toggle-btn"
+                onClick={handleDownloadPdf}
+                title="Download Final Return PDF"
+                style={{ width: 'auto', padding: '0 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--accent-primary)', color: '#fff', border: 'none', cursor: 'pointer' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                PDF Return
+              </button>
               <button className="theme-toggle-btn" onClick={toggleTheme} aria-label="Toggle theme">
                 {theme === 'light' ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -748,8 +811,9 @@ export default function App() {
                   <input
                     id="p60-file"
                     type="file"
+                    multiple
                     style={{ display: 'none' }}
-                    accept=".pdf,.png,.jpg"
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.csv,.zip"
                     onChange={handleFileUpload}
                     disabled={userRole === 'Supporting Agent' && currentPhase >= 5}
                   />

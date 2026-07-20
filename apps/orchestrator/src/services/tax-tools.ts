@@ -17,6 +17,7 @@ import {
   SA102Schema,
   ForeignIncomeItemSchema,
   SA109Schema,
+  CapitalGainsDisposalSchema,
 } from '@uk-sa-app/return-model';
 import { searchHmrcGuidance } from '@uk-sa-app/knowledge';
 
@@ -196,6 +197,57 @@ export const TAX_TOOL_DEFINITIONS = [
       'Checks whether the return is complete enough to submit and flags blocking issues, missing items, and HMRC online-filing exclusions relevant to foreign-national returns. Call before declaring/submitting.',
     parameters: { type: 'object', properties: {}, required: [] },
   },
+  {
+    name: 'record_capital_gain',
+    description:
+      'Records a capital gains disposal on SA108 — share sales, crypto disposals, property sales. Amounts in POUNDS (£). assetType is one of residential_property, other_property, listed_shares, unlisted_shares, other. disposalDate as YYYY-MM-DD. For crypto-to-crypto swaps, each swap is a separate disposal. For RSUs, the cost basis is the market value at vesting (only post-vest growth is a gain).',
+    parameters: {
+      type: 'object',
+      properties: {
+        assetType: { type: 'string', enum: ['residential_property', 'other_property', 'listed_shares', 'unlisted_shares', 'other'] },
+        disposalDate: { type: 'string', description: 'Date of disposal as YYYY-MM-DD' },
+        proceeds: { type: 'number', description: 'Sale/disposal proceeds in POUNDS (£)' },
+        costs: { type: 'number', description: 'Allowable costs (acquisition + improvements + fees) in POUNDS (£)' },
+        losses: { type: 'number', description: 'Allowable losses in POUNDS (£), default 0' },
+        claimBadr: { type: 'boolean', description: 'Claim Business Asset Disposal Relief (10% rate, default false)' },
+      },
+      required: ['assetType', 'disposalDate', 'proceeds', 'costs'],
+    },
+  },
+  {
+    name: 'compare_fig_election',
+    description:
+      'Quantifies the EXACT tax difference between electing the FIG (Foreign Income & Gains) regime and using the arising basis with FTCR, by running the deterministic engine twice. Use this when a qualifying new arrival has foreign income and may be FIG-eligible (non-UK-resident for the prior 10 years). This is a what-if only — does NOT change the return. Shows both scenarios so the client can make an informed choice.',
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'escalate_to_human',
+    description:
+      'Escalates to a human tax specialist. Call when you encounter a genuinely complex edge case, conflicting evidence, low-confidence advice, or when the client explicitly requests human help. Calibrated uncertainty is ALWAYS better than confident hallucination. Provide a clear reason and a summary of what has been established so far.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: { type: 'string', description: 'Why this needs human review (e.g. "conflicting residence evidence" or "complex RSU cross-border taxation")' },
+        summary: { type: 'string', description: 'Brief summary of the situation and what has been established' },
+        urgency: { type: 'string', enum: ['routine', 'important', 'urgent'], description: 'How urgent is the escalation' },
+      },
+      required: ['reason', 'summary'],
+    },
+  },
+  {
+    name: 'refuse_unsafe_request',
+    description:
+      'Responds to unsafe requests — tax evasion ("just put zero"), fabrication of figures, aggressive avoidance schemes, or requests to submit without verification. Call this instead of complying. Be firm but empathetic: explain WHY the request is problematic and point to legitimate alternatives.',
+    parameters: {
+      type: 'object',
+      properties: {
+        requestType: { type: 'string', enum: ['evasion', 'fabrication', 'aggressive_avoidance', 'unverified_submission', 'other'] },
+        userRequest: { type: 'string', description: 'What the user asked for' },
+        reason: { type: 'string', description: 'Why this cannot be done' },
+      },
+      required: ['requestType', 'userRequest', 'reason'],
+    },
+  },
 ] as const;
 
 // ─── Executor ────────────────────────────────────────────────────────────────
@@ -357,6 +409,128 @@ export function executeTaxTool(
 
       case 'validate_return':
         return { content: validateReturn(r) };
+
+      case 'record_capital_gain': {
+        const disposal = CapitalGainsDisposalSchema.parse({
+          assetType: args.assetType,
+          disposalDate: args.disposalDate,
+          proceeds: toPence(args.proceeds),
+          costs: toPence(args.costs || 0),
+          losses: toPence(args.losses || 0),
+          claimBadr: args.claimBadr ?? false,
+        });
+        if (!r.sa108) r.sa108 = { disposals: [], broughtForwardLosses: 0 };
+        r.sa108.disposals.push(disposal);
+        const gain = disposal.proceeds - disposal.costs - disposal.losses;
+        const gainLabel = gain >= 0 ? `gain ${gbp(gain)}` : `loss ${gbp(-gain)}`;
+        return {
+          mutated: true,
+          content: `Recorded ${disposal.assetType} disposal on ${disposal.disposalDate}: proceeds ${gbp(disposal.proceeds)}, costs ${gbp(disposal.costs)}, ${gainLabel}. ${r.sa108.disposals.length} disposal(s) on SA108 now. Run compute_return to see the CGT position.`,
+        };
+      }
+
+      case 'compare_fig_election': {
+        if (!r.sa106?.foreignIncome?.length) {
+          return { isError: true, content: 'compare_fig_election requires foreign income (SA106) to be recorded first. Record foreign income items, then compare.' };
+        }
+        if (!r.sa109) {
+          return { isError: true, content: 'compare_fig_election requires residence (SA109) to be recorded first.' };
+        }
+        // Scenario A: arising basis with FTCR (FIG = false)
+        const cloneA: Return = JSON.parse(JSON.stringify(r));
+        cloneA.sa109!.residenceStatus.figRegimeElected = false;
+        const calcA = computeFullReturn(cloneA, config);
+
+        // Scenario B: FIG elected (foreign income excluded, PA forfeited)
+        const cloneB: Return = JSON.parse(JSON.stringify(r));
+        cloneB.sa109!.residenceStatus.figRegimeElected = true;
+        const calcB = computeFullReturn(cloneB, config);
+
+        const liab = (c: any) =>
+          Math.max(0, (c.incomeTax?.incomeTaxTotal || 0) - (c.ftcr?.totalAllowedCredit || 0))
+          + (c.charges?.hicbcAmount || 0) + (c.charges?.studentLoanBalanceDue || 0) + (c.cgt?.totalCgtDue || 0);
+
+        const arisingLiab = liab(calcA);
+        const figLiab = liab(calcB);
+        const arisingBP = arisingLiab - (calcA.taxAlreadyPaidTotal || 0);
+        const figBP = figLiab - (calcB.taxAlreadyPaidTotal || 0);
+        const diff = arisingBP - figBP;
+
+        const foreignTotal = r.sa106.foreignIncome.reduce((a, i) => a + i.grossAmount, 0);
+        const foreignTax = r.sa106.foreignIncome.reduce((a, i) => a + (i.foreignTaxPaid || 0), 0);
+
+        return {
+          content: [
+            `FIG Election Comparison (what-if — does NOT change the return):`,
+            ``,
+            `Foreign income: ${gbp(foreignTotal)} gross, ${gbp(foreignTax)} foreign tax paid.`,
+            ``,
+            `SCENARIO A — Arising basis + FTCR:`,
+            `  Total income: ${gbp(calcA.totalIncome || 0)}`,
+            `  Personal allowance: ${gbp(calcA.incomeTax?.personalAllowance || 0)}`,
+            `  Income tax: ${gbp(calcA.incomeTax?.incomeTaxTotal || 0)}`,
+            `  FTCR credit: −${gbp(calcA.ftcr?.totalAllowedCredit || 0)}`,
+            `  Balancing payment: ${gbp(Math.abs(arisingBP))} ${arisingBP >= 0 ? 'due' : 'refund'}`,
+            ``,
+            `SCENARIO B — FIG regime (foreign income excluded, PA + CGT AEA forfeited):`,
+            `  Total income: ${gbp(calcB.totalIncome || 0)}`,
+            `  Personal allowance: ${gbp(calcB.incomeTax?.personalAllowance || 0)} (forfeited under FIG)`,
+            `  Income tax: ${gbp(calcB.incomeTax?.incomeTaxTotal || 0)}`,
+            `  Balancing payment: ${gbp(Math.abs(figBP))} ${figBP >= 0 ? 'due' : 'refund'}`,
+            ``,
+            diff > 0
+              ? `→ FIG saves ${gbp(diff)} compared to the arising basis.`
+              : diff < 0
+                ? `→ Arising basis + FTCR saves ${gbp(-diff)} compared to FIG.`
+                : `→ Both scenarios produce the same result.`,
+            ``,
+            `Quote these exact figures. Do not recalculate. Help the client understand the trade-offs (FIG forfeits the personal allowance of ${gbp(config.personalAllowance)} and the CGT annual exempt amount).`,
+          ].join('\n'),
+        };
+      }
+
+      case 'escalate_to_human': {
+        const reason = args.reason || 'No reason provided';
+        const summary = args.summary || 'No summary provided';
+        const urgency = args.urgency || 'routine';
+        return {
+          content: [
+            `Human escalation recorded.`,
+            `Reason: ${reason}`,
+            `Urgency: ${urgency}`,
+            `Summary: ${summary}`,
+            ``,
+            `Tell the client: "This is a situation where I'd like a human tax specialist to review. I've flagged this for our team with all the details we've gathered so far. You can book a consultation at your convenience, and the specialist will have full context of your return. In the meantime, I've saved everything we've discussed — nothing is lost."`,
+            ``,
+            `Do not attempt to give advice on the escalated issue. Acknowledge what you know, be transparent about what you don't, and reassure the client that escalation is a strength, not a failure.`,
+          ].join('\n'),
+        };
+      }
+
+      case 'refuse_unsafe_request': {
+        const requestType = args.requestType || 'other';
+        const userRequest = args.userRequest || '';
+        const reason = args.reason || '';
+
+        const responses: Record<string, string> = {
+          evasion: 'Tax evasion is illegal. A Self Assessment return is a legal declaration — knowingly entering false figures is a criminal offence under HMRC penalties legislation. I can only help you file accurately and claim the legitimate reliefs you\'re entitled to.',
+          fabrication: 'I cannot fabricate or invent figures. Every number on the return must trace to a source document or the deterministic tax engine. If you\'re unsure about a figure, I can help you find the right document or escalate to a specialist.',
+          aggressive_avoidance: 'I can only advise on legitimate tax reliefs and elections (FTCR, FIG, pension contributions, Gift Aid, etc.). I cannot help with artificial arrangements designed primarily to avoid tax. HMRC\'s GAAR (General Anti-Abuse Rule) can counteract such schemes.',
+          unverified_submission: 'I cannot submit a return without all required data verified. The submission gate requires deterministic calculation, reconciliation, schema validation, and your explicit confirmation. Let\'s make sure everything is correct first.',
+          other: 'I\'m not able to help with that request. Let me know how I can help you file your return accurately.',
+        };
+
+        return {
+          content: [
+            `Request declined: ${userRequest}`,
+            `Reason: ${reason}`,
+            ``,
+            responses[requestType] || responses.other,
+            ``,
+            `Surface this to the client in your own words — be firm but empathetic. Acknowledge their frustration if relevant, and redirect to what you CAN help with.`,
+          ].join('\n'),
+        };
+      }
 
       default:
         return { isError: true, content: `Unknown tool "${name}".` };

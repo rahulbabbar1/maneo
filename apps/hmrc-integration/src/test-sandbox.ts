@@ -140,7 +140,17 @@ function runSandboxFilingTest() {
     process.exit(1);
   }
 
-  console.log('\n✓ All Sandbox XML Assembly & Headers Validation Tests passed successfully!');
+  // 5. Verify MtdItsaProvider with SA109 data
+  import('./services/filing/mtd-provider.js').then(async ({ MtdItsaProvider }) => {
+    const mtd = new MtdItsaProvider();
+    const result = await mtd.submit(mockReturn, 'agent_rahul', fraudHeaders);
+    if (!result.success || !result.irMark) {
+      console.error('✗ Failure: MTD ITSA provider failed to submit SA109 return:', result.errors);
+      process.exit(1);
+    }
+    console.log(`✓ MTD ITSA Provider submitted SA109 return successfully. Receipt ID: ${result.receiptId}, IRmark: ${result.irMark}`);
+    console.log('\n✓ All Sandbox XML Assembly & Headers Validation Tests passed successfully!');
+  });
 }
 
 /**

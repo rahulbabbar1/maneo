@@ -6,6 +6,8 @@ import { PromptBuilder } from './prompt-builder.js';
 import { TAX_TOOL_DEFINITIONS, executeTaxTool } from './tax-tools.js';
 import { enforceFigureGuardrail } from './guardrail.js';
 import { validateReturnProvenance } from './provenance-guard.js';
+import { inferStateFromReturn, shouldCompact, compactHistory, FilingState } from './filing-state.js';
+import { emitGuardrailEvent, emitProvenanceEvent, GuardrailEventType } from './guardrail-telemetry.js';
 
 
 // ─── Model-agnostic tool defs → Vertex schema shape ──────────────────────────
@@ -56,6 +58,74 @@ export function sanitizeHistory(history: any[]): any[] {
     else alt.push(item);
   }
   return alt;
+}
+
+// ─── History compaction (D4 §3) ──────────────────────────────────────────────
+// When the conversation exceeds the compaction threshold, trim older turns and
+// inject a summary. This prevents context rot and keeps the model focused.
+function compactHistoryIfNeeded(
+  history: any[],
+  state: FilingState,
+): { history: any[]; compacted: boolean } {
+  if (!shouldCompact(state)) {
+    return { history, compacted: false };
+  }
+
+  const sanitized = sanitizeHistory(history);
+  if (sanitized.length <= 10) {
+    return { history: sanitized, compacted: false };
+  }
+
+  // Keep the last 10 turns, summarise the rest via the filing state digest
+  const digest = compactHistory(state);
+  state.compactionDigest = digest;
+
+  const kept = sanitized.slice(-10);
+  // Inject the digest as a synthetic first user turn so the model has context
+  const digestTurn = {
+    role: 'user',
+    parts: [{ text: `[Session summary from earlier turns: ${digest}]\n\nContinuing from where we left off.` }],
+  };
+
+  // Ensure alternation
+  const result = [digestTurn, ...kept];
+  const alt: typeof result = [];
+  for (const item of result) {
+    const last = alt[alt.length - 1];
+    if (last && last.role === item.role) last.parts.push(...item.parts);
+    else alt.push(item);
+  }
+  // Ensure starts with user
+  while (alt.length && alt[0].role === 'model') alt.shift();
+
+  return { history: alt, compacted: true };
+}
+
+// ─── Tool-result clearing (D4 §3) ───────────────────────────────────────────
+// Strip large raw tool outputs from history to avoid context bloat.
+// Keeps only the first 500 chars of any tool result text.
+function clearToolResultBloat(history: any[]): any[] {
+  return history.map(entry => {
+    if (!entry?.parts) return entry;
+    const trimmedParts = entry.parts.map((part: any) => {
+      if (part?.functionResponse?.response?.result) {
+        const result = part.functionResponse.response.result;
+        if (typeof result === 'string' && result.length > 500) {
+          return {
+            ...part,
+            functionResponse: {
+              ...part.functionResponse,
+              response: {
+                result: result.slice(0, 500) + '... [truncated for context efficiency]',
+              },
+            },
+          };
+        }
+      }
+      return part;
+    });
+    return { ...entry, parts: trimmedParts };
+  });
 }
 
 // Data residency: model calls must stay in an approved UK/EU region (spec 9.3).
@@ -119,18 +189,33 @@ export class GeminiAgent {
       : Object.keys(CONFIGS).sort().reverse()[0];
     const config = getConfig(taxYear);
 
+    // Build filing state from the return (D4 §3)
+    const filingState = inferStateFromReturn(returnObj);
+    filingState.turnCount = (history || []).length;
+
     let replyText = '';
 
     if (this.vertexAI) {
       try {
         const model = this.vertexAI.getGenerativeModel({
           model: 'gemini-2.5-flash',
-          systemInstruction: PromptBuilder.buildSystemInstruction(returnObj),
+          systemInstruction: PromptBuilder.buildSystemInstruction(returnObj, filingState),
           generationConfig: { maxOutputTokens: 8192, temperature: 0.4 },
           tools: [{ functionDeclarations: VERTEX_FUNCTION_DECLARATIONS as any }],
         });
 
-        const chat = model.startChat({ history: sanitizeHistory(history) });
+        // Apply context management: compact history and clear tool bloat
+        let processedHistory = clearToolResultBloat(history);
+        const { history: compactedHistory, compacted } = compactHistoryIfNeeded(
+          processedHistory,
+          filingState,
+        );
+        if (compacted) {
+          console.log('[Context] History compacted — digest injected, older turns trimmed.');
+        }
+        processedHistory = sanitizeHistory(compactedHistory);
+
+        const chat = model.startChat({ history: processedHistory });
 
         let response = await sendWithRetry(chat, message);
         let calls = (response.response.candidates?.[0]?.content?.parts || [])
@@ -145,6 +230,23 @@ export class GeminiAgent {
             const { name, args } = (call as any).functionCall;
             const res = executeTaxTool(name, args || {}, { returnObj });
             console.log(`[Tool] ${name} -> ${res.isError ? 'ERROR' : 'ok'}`);
+
+            // Emit telemetry for safety-relevant tools
+            if (name === 'escalate_to_human') {
+              emitGuardrailEvent({
+                type: GuardrailEventType.ESCALATION,
+                returnId: returnObj.id,
+                details: { reason: args.reason || 'unspecified', toolArgs: args },
+              });
+            }
+            if (name === 'refuse_unsafe_request') {
+              emitGuardrailEvent({
+                type: GuardrailEventType.UNSAFE_REQUEST_REFUSED,
+                returnId: returnObj.id,
+                details: { requestType: args.requestType || 'unspecified', reason: args.reason || '' },
+              });
+            }
+
             outputs.push({
               functionResponse: {
                 name,
@@ -201,6 +303,11 @@ export class GeminiAgent {
     const guarded = enforceFigureGuardrail(replyText, calculation, returnObj, config);
     if (guarded.redacted) {
       console.warn('[Safety Net C5] Redacted unverified monetary figure(s) from model reply.');
+      emitGuardrailEvent({
+        type: GuardrailEventType.FIGURE_REDACTED,
+        returnId: returnObj.id,
+        details: { originalText: replyText.slice(0, 200), redactedText: guarded.text.slice(0, 200) },
+      });
     }
     replyText = guarded.text;
 
@@ -208,9 +315,9 @@ export class GeminiAgent {
     const provenance = validateReturnProvenance(returnObj, calculation);
     if (!provenance.valid) {
       console.warn('[Safety Net C5] Provenance warning(s):', provenance.violations.join('; '));
+      emitProvenanceEvent(returnObj.id, provenance.violations);
     }
 
-    return { reply: replyText, phase: 'active', calculation };
+    return { reply: replyText, phase: filingState.phase, calculation };
   }
 }
-

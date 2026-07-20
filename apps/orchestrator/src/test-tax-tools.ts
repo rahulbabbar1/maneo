@@ -27,7 +27,7 @@ const r = makeReturn();
 const ctx = { returnObj: r };
 
 // Tool set sanity
-assert(TAX_TOOL_DEFINITIONS.length === 13, `13 tools defined (got ${TAX_TOOL_DEFINITIONS.length})`);
+assert(TAX_TOOL_DEFINITIONS.length === 17, `17 tools defined (got ${TAX_TOOL_DEFINITIONS.length})`);
 
 // HMRC Grounding Layer (C1)
 let resGround = executeTaxTool('search_hmrc_guidance', { query: 'UK India dividend treaty cap' }, ctx);

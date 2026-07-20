@@ -1,0 +1,95 @@
+name: CI/CD Pipeline & Online Agent Evaluation
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test-and-eval:
+    name: Build, Test & Online Agent Eval
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Build Monorepo Packages
+        run: npm run build
+
+      - name: Run Deterministic Unit Tests
+        run: npm run test
+
+      - name: Authenticate with Google Cloud
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Cloud SDK
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: 'uk-self-assessment'
+
+      - name: Run Online Agent Evaluation Suite (Vertex AI)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        env:
+          GCP_PROJECT: 'uk-self-assessment'
+          GCP_REGION: 'europe-west2'
+        run: npm run eval --workspace @uk-sa-app/orchestrator
+
+  deploy:
+    name: Deploy to Cloud Run & Verify Online
+    needs: test-and-eval
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK & Docker auth
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker europe-west2-docker.pkg.dev --quiet
+
+      - name: Build and Push Container Image
+        run: |
+          IMAGE="europe-west2-docker.pkg.dev/uk-self-assessment/cloud-run-source-deploy/uk-sa-orchestrator:${{ github.sha }}"
+          LATEST="europe-west2-docker.pkg.dev/uk-self-assessment/cloud-run-source-deploy/uk-sa-orchestrator:latest"
+          docker build -t $IMAGE -t $LATEST -f apps/orchestrator/Dockerfile .
+          docker push $IMAGE
+          docker push $LATEST
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy uk-sa-orchestrator \
+            --image europe-west2-docker.pkg.dev/uk-self-assessment/cloud-run-source-deploy/uk-sa-orchestrator:${{ github.sha }} \
+            --region europe-west2 \
+            --platform managed \
+            --allow-unauthenticated
+
+      - name: Verify Live Online Deployment
+        run: |
+          URL=$(gcloud run services describe uk-sa-orchestrator --region=europe-west2 --format='value(status.url)')
+          echo "Pinging online endpoint: $URL/api/health"
+          curl -sS --fail "$URL/api/health" || exit 1
+          echo "✓ Online deployment verified successfully!"
