@@ -27,7 +27,7 @@ const r = makeReturn();
 const ctx = { returnObj: r };
 
 // Tool set sanity
-assert(TAX_TOOL_DEFINITIONS.length === 19, `19 tools defined (got ${TAX_TOOL_DEFINITIONS.length})`);
+assert(TAX_TOOL_DEFINITIONS.length === 21, `21 tools defined (got ${TAX_TOOL_DEFINITIONS.length})`);
 
 // Crypto CARF & TRF tools test
 let resCrypto = executeTaxTool('record_crypto_income_and_gains', { category: 'disposal_gain', amountInPounds: 5000, costBasis: 2000, platform: 'Coinbase' }, ctx);
@@ -35,6 +35,13 @@ assert(!resCrypto.isError && r.sa108?.disposals.length === 1, 'record_crypto_inc
 
 let resTrf = executeTaxTool('calculate_trf_designation', { unremittedAmountPounds: 50000 }, ctx);
 assert(!resTrf.isError && resTrf.content.includes('12%'), 'calculate_trf_designation quantifies 12% TRF flat tax rate');
+
+let resPrior = executeTaxTool('compare_prior_year_amendment', { priorYear: '2024-25', priorBroughtForwardLosses: 4000 }, ctx);
+assert(!resPrior.isError && r.sa108?.broughtForwardLosses === 400000, 'compare_prior_year_amendment records brought forward losses');
+
+const sampleCsv = `Date,Asset,Type,Quantity,PriceGBP\n2025-05-01,BTC,BUY,1.0,30000\n2025-09-10,BTC,SELL,0.5,40000\n`;
+let resCsv = executeTaxTool('filter_large_csv_transactions', { csvRawContent: sampleCsv }, ctx);
+assert(!resCsv.isError && resCsv.content.includes('Code Mode Sandboxed CSV Processing Summary'), 'filter_large_csv_transactions filters raw CSV');
 
 // HMRC Grounding Layer (C1)
 let resGround = executeTaxTool('search_hmrc_guidance', { query: 'UK India dividend treaty cap' }, ctx);

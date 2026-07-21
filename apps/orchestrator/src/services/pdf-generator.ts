@@ -267,8 +267,9 @@ function compilePdfDocument(pages: string[]): Buffer {
   let pdf = `%PDF-1.4\n`;
   const offsets: number[] = [];
 
+  // Object 1: Catalog with AcroForm for fillable digital form fields
   offsets.push(pdf.length);
-  pdf += `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`;
+  pdf += `1 0 obj\n<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [] /NeedAppearances true >> >>\nendobj\n`;
 
   const kids = pages.map((_, i) => `${i * 2 + 3} 0 R`).join(' ');
   offsets.push(pdf.length);

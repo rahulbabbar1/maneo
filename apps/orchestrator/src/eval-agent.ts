@@ -297,6 +297,53 @@ const SCENARIOS: Scenario[] = [
       return f;
     },
   },
+  {
+    name: 'Cryptoasset CARF 2026 reporting & disposal classification',
+    toolCalls: [
+      { name: 'record_employment', args: { employerName: 'TechCorp', grossPay: 65000, taxDeducted: 13000 } },
+      { name: 'record_crypto_income_and_gains', args: { category: 'disposal_gain', amountInPounds: 10000, costBasis: 4000, platform: 'Binance' } },
+    ],
+    expect: (_compute, r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      if (!r.sa108?.disposals?.length) f.push('Crypto disposal not recorded on SA108');
+      return f;
+    },
+  },
+  {
+    name: 'Temporary Repatriation Facility (TRF) 12% flat rate election',
+    toolCalls: [
+      { name: 'calculate_trf_designation', args: { unremittedAmountPounds: 100000 } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
+  {
+    name: 'Prior year loss carry-forward & amendment analysis',
+    toolCalls: [
+      { name: 'compare_prior_year_amendment', args: { priorYear: '2024-25', priorBroughtForwardLosses: 5000 } },
+    ],
+    expect: (_compute, r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      if (r.sa108?.broughtForwardLosses !== 500000) f.push('Prior year brought forward loss not recorded');
+      return f;
+    },
+  },
+  {
+    name: 'Code Mode sandboxed transaction spreadsheet processing',
+    toolCalls: [
+      { name: 'filter_large_csv_transactions', args: { csvRawContent: 'Date,Asset,Type,Quantity,PriceGBP\n2025-04-10,ETH,BUY,2.0,1500\n2025-08-15,ETH,SELL,1.0,2500\n' } },
+    ],
+    expect: (_compute, _r, m) => {
+      const f: string[] = [];
+      if (m.toolErrors) f.push(`unexpected tool errors: ${m.toolErrors}`);
+      return f;
+    },
+  },
 ];
 
 // ─── Behavioral Rubric & Prompt Sensitivity Evaluation ───────────────────────

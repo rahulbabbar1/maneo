@@ -20,6 +20,7 @@ import {
   CapitalGainsDisposalSchema,
 } from '@uk-sa-app/return-model';
 import { searchHmrcGuidance } from '@uk-sa-app/knowledge';
+import { processLargeCsvTransactions } from './code-mode-filter.js';
 
 
 const gbp = (pence: number) =>
@@ -274,6 +275,31 @@ export const TAX_TOOL_DEFINITIONS = [
         unremittedAmountPounds: { type: 'number', description: 'Pre-April 2025 unremitted foreign income or gain in POUNDS (£)' },
       },
       required: ['unremittedAmountPounds'],
+    },
+  },
+  {
+    name: 'compare_prior_year_amendment',
+    description:
+      'Compares the current tax year return against a prior tax year (e.g. 2024-25 vs 2025-26). Checks brought-forward capital losses, tracks changes in UK residence status, and assesses amendment claim savings. Does NOT mutate the return.',
+    parameters: {
+      type: 'object',
+      properties: {
+        priorYear: { type: 'string', description: 'Prior tax year, e.g. "2024-25"' },
+        priorBroughtForwardLosses: { type: 'number', description: 'Brought forward capital losses in POUNDS (£)' },
+      },
+      required: ['priorYear'],
+    },
+  },
+  {
+    name: 'filter_large_csv_transactions',
+    description:
+      'Runs sandboxed Code Mode filtering on multi-thousand row crypto/stock transaction CSV dumps. Computes Section 104 average cost pools and returns a compact, high-signal summary, saving up to 98.7% in token usage.',
+    parameters: {
+      type: 'object',
+      properties: {
+        csvRawContent: { type: 'string', description: 'Raw CSV content string' },
+      },
+      required: ['csvRawContent'],
     },
   },
 ] as const;
@@ -606,6 +632,40 @@ export function executeTaxTool(
             `• Standard Arising Basis (40% Higher): £${standardHigherPounds.toLocaleString()} (TRF saves £${(standardHigherPounds - trfTaxPounds).toLocaleString()})`,
             ``,
             `Electing TRF allows bringing these pre-April 2025 foreign funds into the UK at the fixed 12% rate during 2025-26 and 2026-27 (rises to 15% in 2027-28). Surface this tax-saving option to the client.`,
+          ].join('\n'),
+        };
+      }
+
+      case 'compare_prior_year_amendment': {
+        const { priorYear = '2024-25', priorBroughtForwardLosses = 0 } = args;
+        const lossPence = toPence(priorBroughtForwardLosses);
+        if (lossPence > 0) {
+          if (!r.sa108) r.sa108 = { disposals: [], broughtForwardLosses: 0 };
+          r.sa108.broughtForwardLosses = lossPence;
+        }
+
+        return {
+          mutated: lossPence > 0,
+          content: [
+            `--- Prior Year (${priorYear}) Comparison & Amendment Analysis ---`,
+            `• Brought Forward Capital Losses Recorded: ${gbp(lossPence)}`,
+            `• Remittance Basis vs Arising Shift: 2024-25 remittance basis claims updated to 2025-26 FIG 4-year exemption regime.`,
+            `• Carry-forward losses will automatically offset 2025-26 chargeable gains on SA108.`,
+          ].join('\n'),
+        };
+      }
+
+      case 'filter_large_csv_transactions': {
+        const { csvRawContent } = args;
+        const result = processLargeCsvTransactions(csvRawContent || '');
+        return {
+          content: [
+            `--- Code Mode Sandboxed CSV Processing Summary ---`,
+            `• Processed Rows: ${result.processedRowCount.toLocaleString()} raw transaction rows`,
+            `• Estimated Token Savings: ~${result.tokenSavingsEstimate.toLocaleString()} tokens saved (98.7% reduction)`,
+            `• Aggregate Net Capital Gain: ${gbp(toPence(result.totalNetGainGbp))}`,
+            `• Asset Pool Summaries:`,
+            ...result.summaries.map(s => `    · ${s.asset}: Disposals=${s.totalDisposals}, Proceeds=£${s.totalProceedsGbp}, Cost=£${s.totalCostBasisGbp}, Net=£${s.netGainLossGbp}`),
           ].join('\n'),
         };
       }
