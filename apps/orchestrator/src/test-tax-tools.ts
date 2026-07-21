@@ -27,7 +27,14 @@ const r = makeReturn();
 const ctx = { returnObj: r };
 
 // Tool set sanity
-assert(TAX_TOOL_DEFINITIONS.length === 17, `17 tools defined (got ${TAX_TOOL_DEFINITIONS.length})`);
+assert(TAX_TOOL_DEFINITIONS.length === 19, `19 tools defined (got ${TAX_TOOL_DEFINITIONS.length})`);
+
+// Crypto CARF & TRF tools test
+let resCrypto = executeTaxTool('record_crypto_income_and_gains', { category: 'disposal_gain', amountInPounds: 5000, costBasis: 2000, platform: 'Coinbase' }, ctx);
+assert(!resCrypto.isError && r.sa108?.disposals.length === 1, 'record_crypto_income_and_gains records SA108 disposal');
+
+let resTrf = executeTaxTool('calculate_trf_designation', { unremittedAmountPounds: 50000 }, ctx);
+assert(!resTrf.isError && resTrf.content.includes('12%'), 'calculate_trf_designation quantifies 12% TRF flat tax rate');
 
 // HMRC Grounding Layer (C1)
 let resGround = executeTaxTool('search_hmrc_guidance', { query: 'UK India dividend treaty cap' }, ctx);
