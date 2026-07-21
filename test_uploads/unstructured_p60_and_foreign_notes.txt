@@ -1,0 +1,14 @@
+UNSTRUCTURED TAX MEMO - TAX YEAR 2025-26
+Client Name: Rahul Babbar (UTR: 12345 67890)
+
+Employment Notes:
+- Worked at Acme UK Ltd (PAYE Ref: 120/A4590).
+- Total P60 Salary: £85,000.00
+- PAYE Tax Deducted: £20,123.00
+
+Overseas Income Notes:
+- Dividends received from India (HDFC Bank): Gross £1,000 GBP, Foreign withholding tax paid £150 GBP (15%). Claim Foreign Tax Credit Relief.
+
+Residence & FIG Election:
+- Spent 190 days in the UK in 2025-26.
+- Foreign domiciled. Elects for 4-year Foreign Income & Gains (FIG) exemption regime.
