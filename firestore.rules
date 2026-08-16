@@ -3,12 +3,53 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ── Chat sessions (existing) ──────────────────────────────────────────────
     // A user may only read/write their own sessions subtree.
     // Path: sessions/{userId}/sessions/{sessionId}
     // Path: sessions/{userId}/sessions/{sessionId}/messages/{messageId}
     match /sessions/{userId}/{document=**} {
       allow read, write: if request.auth != null
         && request.auth.uid == userId;
+    }
+
+    // ── Tax returns ───────────────────────────────────────────────────────────
+    // A user may only access their own returns.
+    // Path: returns/{userId}/filings/{returnId}
+    match /returns/{userId}/filings/{returnId} {
+      allow read: if request.auth != null
+        && request.auth.uid == userId;
+
+      // Allow create and update, but block modification of submitted/accepted returns
+      allow create: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && !(resource.data.status in ['submitted', 'accepted']
+             && !('status' in request.resource.data));
+
+      // Only drafts can be deleted
+      allow delete: if request.auth != null
+        && request.auth.uid == userId
+        && resource.data.status == 'draft';
+
+      // ── Computation snapshots (immutable) ─────────────────────────────────
+      match /computations/{compId} {
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+        allow create: if request.auth != null
+          && request.auth.uid == userId;
+        // No update or delete — computation snapshots are immutable
+      }
+
+      // ── Audit trail (append-only) ─────────────────────────────────────────
+      match /audit/{eventId} {
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+        allow create: if request.auth != null
+          && request.auth.uid == userId;
+        // No update or delete — audit trail is append-only
+      }
     }
   }
 }

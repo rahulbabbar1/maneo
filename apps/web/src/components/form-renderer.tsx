@@ -1,7 +1,7 @@
 import { useReturnStore } from '../store/useReturnStore.js';
 
 interface FormRendererProps {
-  activeSection: 'SA100' | 'SA102' | 'SA106' | 'SA109';
+  activeSection: 'SA100' | 'SA102' | 'SA106' | 'SA108' | 'SA109' | 'SA101';
 }
 
 export function FormRenderer({ activeSection }: FormRendererProps) {
@@ -313,6 +313,154 @@ export function FormRenderer({ activeSection }: FormRendererProps) {
             />
             <label htmlFor="owr-claim">Claim Overseas Workday Relief (OWR)</label>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeSection === 'SA108') {
+    const disposals = returnObj.sa108?.disposals || [];
+
+    const addDisposal = () => {
+      const newDisp = {
+        assetType: 'listed_shares' as const,
+        disposalDate: new Date().toISOString().slice(0, 10),
+        proceeds: 0,
+        costs: 0,
+        losses: 0,
+        claimBadr: false,
+      };
+      updateField(`sa108.disposals[${disposals.length}]`, newDisp);
+    };
+
+    return (
+      <div className="form-panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 className="form-title" style={{ margin: 0 }}>SA108 — Capital Gains Disposals</h3>
+          <button className="action-btn secondary" onClick={addDisposal}>+ Add Asset Disposal</button>
+        </div>
+
+        <div className="form-group" style={{ marginBottom: '20px' }}>
+          <label>Losses Brought Forward from Prior Years (£)</label>
+          <input
+            type="number"
+            value={getPoundsValue(returnObj.sa108?.broughtForwardLosses || 0)}
+            onChange={(e) => handleNumberChange('sa108.broughtForwardLosses', e.target.value)}
+          />
+        </div>
+
+        {disposals.map((disp, i) => (
+          <div key={i} className="form-section" style={{ border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
+            <h4>Disposal #{i + 1}</h4>
+            <div className="form-group">
+              <label>Asset Type</label>
+              <select
+                value={disp.assetType}
+                onChange={(e) => updateField(`sa108.disposals[${i}].assetType`, e.target.value)}
+              >
+                <option value="listed_shares">Listed Shares / Equities</option>
+                <option value="unlisted_shares">Unlisted Shares / Private Equity</option>
+                <option value="residential_property">Residential Property</option>
+                <option value="other_property">Other Real Estate / Land</option>
+                <option value="other">Cryptoassets / Other Capital Assets</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Disposal Date</label>
+              <input
+                type="date"
+                value={disp.disposalDate || ''}
+                onChange={(e) => updateField(`sa108.disposals[${i}].disposalDate`, e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Gross Proceeds (£)</label>
+              <input
+                type="number"
+                value={getPoundsValue(disp.proceeds)}
+                onChange={(e) => handleNumberChange(`sa108.disposals[${i}].proceeds`, e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Allowable Costs & Acquisition Basis (£)</label>
+              <input
+                type="number"
+                value={getPoundsValue(disp.costs)}
+                onChange={(e) => handleNumberChange(`sa108.disposals[${i}].costs`, e.target.value)}
+              />
+            </div>
+            <div className="form-group checkbox-group">
+              <input
+                type="checkbox"
+                id={`badr-${i}`}
+                checked={disp.claimBadr}
+                onChange={(e) => updateField(`sa108.disposals[${i}].claimBadr`, e.target.checked)}
+              />
+              <label htmlFor={`badr-${i}`}>Claim Business Asset Disposal Relief (BADR / 10% rate)</label>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (activeSection === 'SA101') {
+    const sl = returnObj.sa101?.studentLoan || { planType: 'none' };
+    const hicbc = returnObj.sa101?.highIncomeChildBenefitCharge || { incomeOverThreshold: false, numberOfChildren: 0, benefitAmountReceived: 0 };
+
+    return (
+      <div className="form-panel">
+        <h3 className="form-title">SA101 — Student Loans & HICBC</h3>
+
+        <div className="form-section">
+          <h4>Student Loan Repayment</h4>
+          <div className="form-group">
+            <label>Student Loan Plan Type</label>
+            <select
+              value={sl.planType}
+              onChange={(e) => updateField('sa101.studentLoan.planType', e.target.value)}
+            >
+              <option value="none">No Student Loan Repayment Due</option>
+              <option value="plan_1">Plan 1 (£24,933 threshold)</option>
+              <option value="plan_2">Plan 2 (£27,295 threshold)</option>
+              <option value="plan_4">Plan 4 (Scotland - £31,395 threshold)</option>
+              <option value="plan_5">Plan 5 (£25,000 threshold)</option>
+              <option value="postgraduate">Postgraduate Loan (£21,000 threshold)</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4>High Income Child Benefit Charge (HICBC)</h4>
+          <div className="form-group checkbox-group">
+            <input
+              type="checkbox"
+              id="hicbc-active"
+              checked={hicbc.incomeOverThreshold}
+              onChange={(e) => updateField('sa101.highIncomeChildBenefitCharge.incomeOverThreshold', e.target.checked)}
+            />
+            <label htmlFor="hicbc-active">Subject to High Income Child Benefit Charge</label>
+          </div>
+          {hicbc.incomeOverThreshold && (
+            <>
+              <div className="form-group">
+                <label>Number of Children Received For</label>
+                <input
+                  type="number"
+                  value={hicbc.numberOfChildren || 0}
+                  onChange={(e) => updateField('sa101.highIncomeChildBenefitCharge.numberOfChildren', parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Total Child Benefit Received (£)</label>
+                <input
+                  type="number"
+                  value={getPoundsValue(hicbc.benefitAmountReceived)}
+                  onChange={(e) => handleNumberChange('sa101.highIncomeChildBenefitCharge.benefitAmountReceived', e.target.value)}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     );

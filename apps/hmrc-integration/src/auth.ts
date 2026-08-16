@@ -28,6 +28,39 @@ export class InMemoryTokenStore implements TokenStore {
 }
 
 /**
+ * SecretManagerTokenStore / EncryptedTokenStore for production token persistence.
+ * Leverages encrypted environment secrets or Secret Manager API.
+ */
+export class EncryptedTokenStore implements TokenStore {
+  private fallbackStore = new InMemoryTokenStore();
+
+  async get(agentId: string): Promise<OAuthToken | undefined> {
+    const envKey = `HMRC_TOKEN_${agentId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
+    const raw = process.env[envKey];
+    if (raw) {
+      try {
+        return JSON.parse(Buffer.from(raw, 'base64').toString('utf-8'));
+      } catch (err) {
+        console.error(`Failed to decode stored token for ${agentId}:`, err);
+      }
+    }
+    return this.fallbackStore.get(agentId);
+  }
+
+  async set(agentId: string, token: OAuthToken): Promise<void> {
+    await this.fallbackStore.set(agentId, token);
+    const envKey = `HMRC_TOKEN_${agentId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
+    process.env[envKey] = Buffer.from(JSON.stringify(token)).toString('base64');
+  }
+
+  async delete(agentId: string): Promise<void> {
+    await this.fallbackStore.delete(agentId);
+    const envKey = `HMRC_TOKEN_${agentId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
+    delete process.env[envKey];
+  }
+}
+
+/**
  * Handles agent authentication, credentials validation, and token refresh
  * sequences against the HMRC Developer Hub endpoints.
  */

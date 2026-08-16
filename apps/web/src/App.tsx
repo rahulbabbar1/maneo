@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useReturnStore } from './store/useReturnStore.js';
 import { useChatStore, type Session } from './store/useChatStore.js';
 import { FormRenderer } from './components/form-renderer.js';
+import { TermsOfService } from './components/legal/TermsOfService.js';
+import { PrivacyPolicy } from './components/legal/PrivacyPolicy.js';
 import { auth, googleProvider } from './lib/firebase.js';
 import { signInWithPopup, signOut, onAuthStateChanged, type User } from 'firebase/auth';
 import { authHeaders } from './lib/authService.js';
@@ -115,8 +117,11 @@ export default function App() {
     await signOut(auth);
   };
 
-  const [activeTab, setActiveTab] = useState<'chat' | 'SA100' | 'SA102' | 'SA106' | 'SA109'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'SA100' | 'SA102' | 'SA106' | 'SA108' | 'SA109' | 'SA101'>('chat');
   const [inputText, setInputText] = useState('');
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [submittingFiling, setSubmittingFiling] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
@@ -506,6 +511,20 @@ export default function App() {
           <div className="user-info" style={{ display: 'flex', flexDirection: 'column' }}>
             <span className="user-name">{username}</span>
             <span className="user-role">{userRole}</span>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button
+                onClick={() => setShowTerms(true)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '10px', textDecoration: 'underline', padding: 0 }}
+              >
+                Terms
+              </button>
+              <button
+                onClick={() => setShowPrivacy(true)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '10px', textDecoration: 'underline', padding: 0 }}
+              >
+                Privacy
+              </button>
+            </div>
             <button
               onClick={handleLogout}
               style={{
@@ -561,6 +580,19 @@ export default function App() {
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
                 </svg>
                 PDF Return
+              </button>
+              <button
+                className="theme-toggle-btn"
+                onClick={async () => {
+                  setSubmittingFiling(true);
+                  await handleSendMessage('I confirm the final return declaration and wish to submit to HMRC.');
+                  setSubmittingFiling(false);
+                }}
+                disabled={submittingFiling || (userRole === 'Supporting Agent' && currentPhase >= 5)}
+                title="Submit Return to HMRC"
+                style={{ width: 'auto', padding: '0 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, background: 'var(--success-color, #2e7d32)', color: '#fff', border: 'none', cursor: 'pointer' }}
+              >
+                🚀 {submittingFiling ? 'Filing...' : 'Submit to HMRC'}
               </button>
               <button className="theme-toggle-btn" onClick={toggleTheme} aria-label="Toggle theme">
                 {theme === 'light' ? (
@@ -791,10 +823,16 @@ export default function App() {
               SA102
             </button>
             <button className={`tab-btn ${activeTab === 'SA106' ? 'active' : ''}`} onClick={() => setActiveTab('SA106')}>
-              SA106
+              SA106 (Foreign)
+            </button>
+            <button className={`tab-btn ${activeTab === 'SA108' ? 'active' : ''}`} onClick={() => setActiveTab('SA108')}>
+              SA108 (CGT)
             </button>
             <button className={`tab-btn ${activeTab === 'SA109' ? 'active' : ''}`} onClick={() => setActiveTab('SA109')}>
-              SA109
+              SA109 (Residence)
+            </button>
+            <button className={`tab-btn ${activeTab === 'SA101' ? 'active' : ''}`} onClick={() => setActiveTab('SA101')}>
+              SA101 (Loans/HICBC)
             </button>
           </div>
 
@@ -969,6 +1007,9 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* ── Legal Disclosures & Privacy Policy Modals ── */}
+      {showTerms && <TermsOfService onClose={() => setShowTerms(false)} />}
+      {showPrivacy && <PrivacyPolicy onClose={() => setShowPrivacy(false)} />}
     </div>
   );
 }

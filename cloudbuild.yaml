@@ -48,7 +48,7 @@ steps:
       - '--image=europe-west2-docker.pkg.dev/uk-self-assessment/cloud-run-source-deploy/uk-sa-orchestrator:$SHORT_SHA'
       - '--region=europe-west2'
       - '--platform=managed'
-      - '--allow-unauthenticated'
+      - '--no-allow-unauthenticated'
 
   # 7. Online Post-Deployment Smoke Test (Online Verification)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'

@@ -20,6 +20,9 @@ function runSandboxFilingTest() {
     clientId: 'client-rahul',
     taxYear: '2025-26',
     status: 'draft',
+    clientDetails: {
+      utr: '1234567890',  // Test UTR for sandbox
+    },
     sa100: {
       taxAlreadyPaid: {
         payeTax: 2012300,

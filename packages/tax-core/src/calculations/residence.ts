@@ -56,7 +56,7 @@ export function evaluateSrt(input: SrtInput, _config: TaxYearConfig): SrtResult 
       isResident: false,
       ruleApplied: 'AOT2: Sped less than 46 days in the UK (not previously resident)',
       splitYearEligible: false,
-      figRegimeEligible: nonResidentPrevious10Years,
+      figRegimeEligible: false, // Non-residents are NEVER FIG-eligible
     };
   }
 
@@ -66,7 +66,7 @@ export function evaluateSrt(input: SrtInput, _config: TaxYearConfig): SrtResult 
       isResident: false,
       ruleApplied: 'AOT3: Works full-time overseas and UK days < 91',
       splitYearEligible: false,
-      figRegimeEligible: nonResidentPrevious10Years,
+      figRegimeEligible: false, // Non-residents are NEVER FIG-eligible
     };
   }
 
@@ -78,7 +78,8 @@ export function evaluateSrt(input: SrtInput, _config: TaxYearConfig): SrtResult 
       isResident: true,
       ruleApplied: 'AUT1: Sped 183 days or more in the UK',
       splitYearEligible: true,
-      figRegimeEligible: nonResidentPrevious10Years,
+      // FIG: only for new-arrival UK residents who were non-resident for prior 10 years
+      figRegimeEligible: nonResidentPrevious10Years && !wasResidentInPrevious3Years,
     };
   }
 
@@ -88,7 +89,7 @@ export function evaluateSrt(input: SrtInput, _config: TaxYearConfig): SrtResult 
       isResident: true,
       ruleApplied: 'AUT2: Only or main home in the UK',
       splitYearEligible: true,
-      figRegimeEligible: nonResidentPrevious10Years,
+      figRegimeEligible: nonResidentPrevious10Years && !wasResidentInPrevious3Years,
     };
   }
 
@@ -98,7 +99,7 @@ export function evaluateSrt(input: SrtInput, _config: TaxYearConfig): SrtResult 
       isResident: true,
       ruleApplied: 'AUT3: Works full-time in the UK',
       splitYearEligible: true,
-      figRegimeEligible: nonResidentPrevious10Years,
+      figRegimeEligible: nonResidentPrevious10Years && !wasResidentInPrevious3Years,
     };
   }
 
@@ -158,6 +159,8 @@ export function evaluateSrt(input: SrtInput, _config: TaxYearConfig): SrtResult 
     isResident,
     ruleApplied,
     splitYearEligible: isResident, // Simplification for split year
-    figRegimeEligible: isResident && nonResidentPrevious10Years,
+    // FIG: only for new-arrival UK residents (resident now, non-resident for prior 10 years,
+    // and was not resident in any of the previous 3 years — i.e. a genuine new arrival)
+    figRegimeEligible: isResident && nonResidentPrevious10Years && !wasResidentInPrevious3Years,
   };
 }

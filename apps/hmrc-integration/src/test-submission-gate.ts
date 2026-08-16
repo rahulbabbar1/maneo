@@ -10,8 +10,13 @@ async function runSubmissionGateTests() {
     clientId: 'client-gate',
     taxYear: '2025-26',
     status: 'draft',
+    clientDetails: {
+      utr: '1234567890',
+    },
     sa100: { taxAlreadyPaid: { payeTax: 2012300, taxDeductedFromSavings: 0, taxDeductedFromDividends: 0, cisDeductions: 0, otherTaxPaid: 0 }, reliefs: { giftAidGrossedUp: 0, relievablePensionContributions: 0, blindPersonsAllowance: false, marriageAllowanceTransferor: false, marriageAllowanceRecipient: false } },
     sa102: [{ employerName: 'Acme UK Ltd', employerRef: '120/A4590', grossPay: 8500000, taxDeducted: 2012300, benefits: { companyCars: 0, medicalInsurance: 0, otherBenefits: 0 }, expenses: { businessTravel: 0, professionalFees: 0, otherExpenses: 0 } }],
+    sa108: { disposals: [{ assetType: 'listed_shares', disposalDate: '2025-09-10', proceeds: 2000000, costs: 1000000, losses: 0, claimBadr: false }], broughtForwardLosses: 0 },
+    sa101: { highIncomeChildBenefitCharge: { incomeOverThreshold: false, numberOfChildren: 0, benefitAmountReceived: 0 }, studentLoan: { planType: 'plan_1' } },
     sa109: { residenceStatus: { daysInUk: 190, srtResult: 'resident', domicileStatus: 'foreign_domiciled', figRegimeElected: true, overseasWorkdayReliefClaimed: false } },
     updatedAt: new Date().toISOString(),
   };
@@ -40,7 +45,33 @@ async function runSubmissionGateTests() {
 
   console.log('\n✓ Success: SubmissionGate correctly blocked excluded return with paper guidance.');
   console.log(`Guidance: "${excludedResult.paperGuidance}"`);
-  console.log('✅ All SubmissionGate 4-Part Tests passed successfully!');
+
+  // 3. Setup invalid return (missing tax year / provenance failure)
+  const invalidReturn: Return = {
+    ...validReturn,
+    id: '',
+    taxYear: '',
+  };
+  const invalidResult = await evaluateSubmissionGate(invalidReturn);
+  if (invalidResult.canSubmitOnline || invalidResult.parts[0].passed) {
+    console.error('✗ Failure: Return lacking valid ID/taxYear was NOT blocked by SubmissionGate Part 1!');
+    process.exit(1);
+  }
+  console.log('✓ Success: SubmissionGate Part 1 correctly blocked return lacking provenance/taxYear.');
+
+  // 4. Setup invalid tax year return (unsupported taxYear / configHash mismatch)
+  const unconfiguredReturn: Return = {
+    ...validReturn,
+    taxYear: '1999-00',
+  };
+  const unconfiguredResult = await evaluateSubmissionGate(unconfiguredReturn);
+  if (unconfiguredResult.canSubmitOnline || unconfiguredResult.parts[0].passed) {
+    console.error('✗ Failure: Return with invalid tax year was NOT blocked by SubmissionGate Part 1!');
+    process.exit(1);
+  }
+  console.log('✓ Success: SubmissionGate Part 1 correctly blocked unconfigured tax year.');
+
+  console.log('\n✅ All SubmissionGate 4-Part Tests passed successfully!');
 }
 
 runSubmissionGateTests();

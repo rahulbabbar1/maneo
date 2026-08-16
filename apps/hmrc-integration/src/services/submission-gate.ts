@@ -1,6 +1,6 @@
 import { Return } from '@uk-sa-app/return-model';
-import { checkIndividualExclusions, ExclusionsReport } from '@uk-sa-app/tax-config';
-import { reconcileReturnAgainstMethodology, ReconciliationReport } from '@uk-sa-app/tax-core';
+import { checkIndividualExclusions, ExclusionsReport, getConfig, configHash } from '@uk-sa-app/tax-config';
+import { reconcileReturnAgainstMethodology, ReconciliationReport, computeFullReturn } from '@uk-sa-app/tax-core';
 import { buildLegacySaXml, calculateIRmark } from '../xml.js';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
@@ -21,6 +21,7 @@ export interface SubmissionGateResult {
 
 /**
  * Validates XML content against the vendored HMRC MTR-v1-2.xsd schema.
+ * Fails closed if the schema file cannot be found or if any validation error occurs.
  */
 function validateXmlAgainstSchema(xmlContent: string): { valid: boolean; errors: string[] } {
   try {
@@ -31,7 +32,7 @@ function validateXmlAgainstSchema(xmlContent: string): { valid: boolean; errors:
 
     let xsdPath = candidatePaths.find(p => existsSync(p));
     if (!xsdPath) {
-      return { valid: true, errors: [] };
+      return { valid: false, errors: ['HMRC schema file MTR-v1-2.xsd not found — failing closed for safety'] };
     }
 
     const xsdDoc = XmlDocument.fromString(readFileSync(xsdPath, 'utf-8'));
@@ -42,6 +43,7 @@ function validateXmlAgainstSchema(xmlContent: string): { valid: boolean; errors:
 
     if (!irEnv) {
       gtDoc.dispose();
+      xsdDoc.dispose();
       return { valid: false, errors: ['IRenvelope node not found in envelope XML'] };
     }
 
@@ -60,9 +62,9 @@ function validateXmlAgainstSchema(xmlContent: string): { valid: boolean; errors:
 
 /**
  * Enforces the four-part SubmissionGate pre-filing checkpoint (T3.4 / T4.2):
- *  Part 1: Deterministic Tax-Core Calculation & Provenance
+ *  Part 1: Deterministic Tax-Core Calculation & Provenance (Strict ConfigHash Signature Match)
  *  Part 2: Zero-Diff Reconciliation against HMRC Methodology
- *  Part 3: Schema & IRmark Validation (MTR-v1-2.xsd via libxml2-wasm)
+ *  Part 3: Schema & IRmark Validation (MTR-v1-2.xsd via libxml2-wasm, fail-closed)
  *  Part 4: HMRC Individual Exclusions & Special Cases Check
  */
 export async function evaluateSubmissionGate(returnObj: Return): Promise<SubmissionGateResult> {
@@ -73,13 +75,112 @@ export async function evaluateSubmissionGate(returnObj: Return): Promise<Submiss
 
   // Part 1: Tax-Core Calculation & Provenance Check
   try {
-    if (!returnObj.id || !returnObj.taxYear) {
-      throw new Error('Return ID and Tax Year are required.');
+    if (!returnObj || !returnObj.id || !returnObj.taxYear) {
+      throw new Error('Return ID and Tax Year are required for provenance checking.');
     }
+
+    // Scan the input return object for any NaN values (A2/A10 checks)
+    const scanForNaN = (obj: any) => {
+      if (obj === null || obj === undefined) return;
+      if (typeof obj === 'number') {
+        if (Number.isNaN(obj)) throw new Error('Input contains non-numeric NaN value.');
+      } else if (typeof obj === 'object') {
+        for (const k of Object.keys(obj)) {
+          scanForNaN(obj[k]);
+        }
+      }
+    };
+    scanForNaN(returnObj);
+
+    const config = getConfig(returnObj.taxYear);
+    const expectedConfigHash = configHash(config);
+    const calc = computeFullReturn(returnObj, config);
+
+    if (!calc || !calc.version || !calc.version.configHash) {
+      throw new Error('Tax-core computation failed to produce valid version/configHash signature.');
+    }
+    if (calc.version.configHash !== expectedConfigHash) {
+      throw new Error(`Tax-core configHash mismatch: computed [${calc.version.configHash}] != expected [${expectedConfigHash}]`);
+    }
+
+    // Enforce numeric invariants (no NaN or Infinite values)
+    const checkNumeric = (val: any, name: string) => {
+      if (typeof val !== 'number' || !Number.isFinite(val)) {
+        throw new Error(`Field ${name} is invalid or non-numeric: ${val}`);
+      }
+    };
+    checkNumeric(calc.balancingPayment, 'balancingPayment');
+    checkNumeric(calc.totalIncome, 'totalIncome');
+    checkNumeric(calc.adjustedNetIncome, 'adjustedNetIncome');
+    checkNumeric(calc.incomeTax.incomeTaxTotal, 'incomeTax.incomeTaxTotal');
+    if (calc.cgt) {
+      checkNumeric(calc.cgt.totalCgtDue, 'cgt.totalCgtDue');
+    }
+
+    // Verify computed totalIncome matches sum of input income sources (provenance check)
+    let expectedTotalIncome = 0;
+    let grossEmployment = 0;
+    for (const emp of returnObj.sa102 || []) {
+      const benefits = emp.benefits || {};
+      const expenses = emp.expenses || {};
+      grossEmployment += (emp.grossPay || 0) + (benefits.companyCars || 0) + (benefits.medicalInsurance || 0) + (benefits.otherBenefits || 0);
+      grossEmployment -= (expenses.businessTravel || 0) + (expenses.professionalFees || 0) + (expenses.otherExpenses || 0);
+    }
+    expectedTotalIncome += Math.max(0, grossEmployment);
+
+    const figElected = returnObj.sa109?.residenceStatus?.figRegimeElected && !calc.figRefusalReason;
+    if (returnObj.sa106 && Array.isArray(returnObj.sa106.foreignIncome) && returnObj.sa109?.residenceStatus?.srtResult !== 'non_resident') {
+      for (const item of returnObj.sa106.foreignIncome) {
+        if (figElected) continue;
+        expectedTotalIncome += item.grossAmount || 0;
+      }
+    }
+    expectedTotalIncome += (returnObj.sa100?.income?.ukSavingsIncome || 0);
+    expectedTotalIncome += (returnObj.sa100?.income?.ukDividendIncome || 0);
+
+    if (calc.totalIncome !== expectedTotalIncome) {
+      throw new Error(`Total income mismatch (provenance check failed): computed ${calc.totalIncome} != expected ${expectedTotalIncome}`);
+    }
+
+    // Zero-income return check: cannot have tax liability unless capital gains exist
+    if (expectedTotalIncome === 0 && calc.balancingPayment !== 0 && !returnObj.sa108?.disposals?.length) {
+      throw new Error('Zero-income return has non-zero tax liability.');
+    }
+
+    // FIG Eligibility and Double Benefit Checks (A3 / A10)
+    if (returnObj.sa109?.residenceStatus?.figRegimeElected) {
+      if (calc.figRefusalReason) {
+        throw new Error(calc.figRefusalReason);
+      }
+      // Electing FIG forfeits the PA. Thus, claiming allowances while on FIG is invalid.
+      const reliefs = returnObj.sa100?.reliefs || {};
+      if (reliefs.blindPersonsAllowance || reliefs.marriageAllowanceTransferor || reliefs.marriageAllowanceRecipient) {
+        throw new Error('FIG regime election disallows claiming or transferring Personal Allowance / Marriage Allowance.');
+      }
+    }
+
+    // Marriage Allowance Checks (Trap 1 / A10)
+    const reliefs = returnObj.sa100?.reliefs || {};
+    if (reliefs.marriageAllowanceTransferor) {
+      // Transferor must be basic-rate or non-taxpayer. Basic rate limit = £37,700 taxable (or £50,270 adjusted net income)
+      const basicLimit = config.incomeTax.rUK.nonSavings[0].limit;
+      const threshold = basicLimit + config.personalAllowance;
+      if (calc.adjustedNetIncome > threshold) {
+        throw new Error('Marriage Allowance transferor must be a non-taxpayer or basic-rate taxpayer.');
+      }
+    }
+    if (reliefs.marriageAllowanceRecipient && calc.totalIncome === 0) {
+      throw new Error('Marriage Allowance recipient has no UK income (invalid claim).');
+    }
+    if (calc.warnings && calc.warnings.some(w => w.startsWith('CRITICAL:'))) {
+      const crit = calc.warnings.find(w => w.startsWith('CRITICAL:'))!;
+      throw new Error(crit.replace('CRITICAL: ', ''));
+    }
+
     parts.push({
       partName: 'Part 1: Tax-Core Calculation & Provenance',
       passed: true,
-      details: 'Tax-core calculation runs deterministically with valid provenance.',
+      details: `Tax-core calculation verified deterministically (v${calc.version.engineVersion}, configHash: ${calc.version.configHash}).`,
     });
   } catch (err: any) {
     canSubmitOnline = false;
@@ -117,7 +218,7 @@ export async function evaluateSubmissionGate(returnObj: Return): Promise<Submiss
     });
   }
 
-  // Part 3: Schema & IRmark Validation
+  // Part 3: Schema & IRmark Validation (Fail-closed)
   try {
     const xml = buildLegacySaXml(returnObj);
     const calculatedIRmark = calculateIRmark(xml);
@@ -125,20 +226,30 @@ export async function evaluateSubmissionGate(returnObj: Return): Promise<Submiss
       throw new Error('IRmark calculation failed or returned invalid signature.');
     }
 
-    // Validate XML schema against MTR-v1-2.xsd
+    // Verify embedded IRmark in generated XML matches calculated IRmark
+    const irMarkMatch = xml.match(/<IRmark[^>]*>([^<]+)<\/IRmark>/);
+    const embeddedIRmark = irMarkMatch ? irMarkMatch[1] : null;
+    if (!embeddedIRmark || embeddedIRmark === 'placeholder_irmark') {
+      throw new Error('XML envelope contains unpopulated or placeholder IRmark.');
+    }
+    if (embeddedIRmark !== calculatedIRmark) {
+      throw new Error(`IRmark mismatch: embedded [${embeddedIRmark}] != calculated [${calculatedIRmark}]`);
+    }
+
+    // Validate XML schema against MTR-v1-2.xsd (Strict Fail-Closed)
     const schemaValidation = validateXmlAgainstSchema(xml);
     if (!schemaValidation.valid) {
       canSubmitOnline = false;
       parts.push({
         partName: 'Part 3: Schema & IRmark Validation',
         passed: false,
-        details: `XML Schema validation errors: ${schemaValidation.errors.join('; ')}`,
+        details: `XML Schema validation errors (Fail-Closed): ${schemaValidation.errors.join('; ')}`,
       });
     } else {
       parts.push({
         partName: 'Part 3: Schema & IRmark Validation',
         passed: true,
-        details: `GovTalk envelope schema valid (MTR-v1-2.xsd); IRmark signature: ${calculatedIRmark}`,
+        details: `GovTalk envelope schema valid (MTR-v1-2.xsd); IRmark verified signature: ${calculatedIRmark}`,
       });
     }
   } catch (err: any) {

@@ -156,6 +156,176 @@ const GOLDEN_VECTORS: GoldenVector[] = [
       assertEq('personalAllowance', r.incomeTax.personalAllowance, 0);
     },
   },
+  {
+    name: 'Case 7: Gift Aid grossed-up band extension (£5,000)',
+    returnObj: {
+      id: '77777777-7777-4777-8777-777777777777',
+      clientId: 'client-7',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: { ...emptyReliefs, giftAidGrossedUp: 500000 } },
+      sa102: [{ employerName: 'Acme UK', grossPay: 6000000, taxDeducted: 0, benefits: emptyBenefits, expenses: emptyExpenses }],
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      // Basic rate band extended from £37,700 to £42,700 (£37,700 + £5,000)
+      const basicBand = r.incomeTax.allocatedBands.find(b => b.name === 'basic');
+      assertEq('basic rate band allocation', basicBand?.amountAllocated || 0, 4270000);
+    },
+  },
+  {
+    name: 'Case 8: Pension contribution relievable band extension (£10,000)',
+    returnObj: {
+      id: '88888888-8888-4888-8888-888888888888',
+      clientId: 'client-8',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: { ...emptyReliefs, relievablePensionContributions: 1000000 } },
+      sa102: [{ employerName: 'TechCorp UK', grossPay: 6500000, taxDeducted: 0, benefits: emptyBenefits, expenses: emptyExpenses }],
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      // Basic rate band extended by £10,000 to £47,700
+      const basicBand = r.incomeTax.allocatedBands.find(b => b.name === 'basic');
+      assertEq('basic rate band allocation', basicBand?.amountAllocated || 0, 4770000);
+    },
+  },
+  {
+    name: 'Case 9: Student Loan Plan 1 charge (£50,000 salary)',
+    returnObj: {
+      id: '99999999-9999-4999-8999-999999999999',
+      clientId: 'client-9',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: emptyReliefs },
+      sa102: [{ employerName: 'ScaleUp UK', grossPay: 5000000, taxDeducted: 0, benefits: emptyBenefits, expenses: emptyExpenses }],
+      sa101: {
+        highIncomeChildBenefitCharge: { incomeOverThreshold: false, numberOfChildren: 0, benefitAmountReceived: 0 },
+        studentLoan: { planType: 'plan_1' },
+      },
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      // Plan 1 threshold £24,933. Excess = £25,067. 9% = £2,256.00
+      assertEq('studentLoanBalanceDue', r.charges.studentLoanBalanceDue, 225600);
+    },
+  },
+  {
+    name: 'Case 10: Capital gains listed shares disposal above AEA (£3,000)',
+    returnObj: {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      clientId: 'client-10',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: emptyReliefs },
+      sa102: [{ employerName: 'Fintech UK', grossPay: 4000000, taxDeducted: 0, benefits: emptyBenefits, expenses: emptyExpenses }],
+      sa108: {
+        disposals: [{ assetType: 'listed_shares', disposalDate: '2025-08-10', proceeds: 2500000, costs: 1000000, losses: 0, claimBadr: false }],
+        broughtForwardLosses: 0,
+      },
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      // Gain £15,000 - AEA £3,000 = £12,000 taxable.
+      assertEq('cgt totalCgtDue', r.cgt?.totalCgtDue || 0, 137300);
+    },
+  },
+  {
+    name: 'Case 11: Capital gains residential property disposal at higher rate (24%)',
+    returnObj: {
+      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      clientId: 'client-11',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: emptyReliefs },
+      sa102: [{ employerName: 'MegaCorp UK', grossPay: 8000000, taxDeducted: 0, benefits: emptyBenefits, expenses: emptyExpenses }],
+      sa108: {
+        disposals: [{ assetType: 'residential_property', disposalDate: '2025-09-01', proceeds: 40000000, costs: 30000000, losses: 0, claimBadr: false }],
+        broughtForwardLosses: 0,
+      },
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      // Gain £100,000 - AEA £3,000 = £97,000 taxable at higher residential rate 24% = £23,280.
+      assertEq('cgt residential higher rate', r.cgt?.totalCgtDue || 0, 2328000);
+    },
+  },
+  {
+    name: 'Case 12: FIG regime election forfeits Personal Allowance',
+    returnObj: {
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      clientId: 'client-12',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: emptyReliefs },
+      sa102: [{ employerName: 'Global Expat', grossPay: 5000000, taxDeducted: 0, benefits: emptyBenefits, expenses: emptyExpenses }],
+      sa109: {
+        residenceStatus: {
+          daysInUk: 190,
+          srtResult: 'resident',
+          domicileStatus: 'foreign_domiciled',
+          figRegimeElected: true,
+          overseasWorkdayReliefClaimed: false,
+        },
+      },
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      assertEq('personalAllowance forfeited', r.incomeTax.personalAllowance, 0);
+      assertEq('figRegimeElected flag', r.figRegimeElected ? 1 : 0, 1);
+    },
+  },
+  {
+    name: 'Case 13: Blind Person Allowance (£3,070 added to PA)',
+    returnObj: {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      clientId: 'client-13',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: { ...emptyReliefs, blindPersonsAllowance: true } },
+      sa102: [{ employerName: 'Acme UK', grossPay: 4000000, taxDeducted: 0, benefits: emptyBenefits, expenses: emptyExpenses }],
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      // PA £12,570 + BPA £3,070 = £15,640
+      assertEq('personalAllowance with BPA', r.incomeTax.personalAllowance, 1564000);
+    },
+  },
+  {
+    name: 'Case 14: Multiple employments total pay aggregation',
+    returnObj: {
+      id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      clientId: 'client-14',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: emptyReliefs },
+      sa102: [
+        { employerName: 'Job 1', grossPay: 3000000, taxDeducted: 400000, benefits: emptyBenefits, expenses: emptyExpenses },
+        { employerName: 'Job 2', grossPay: 2000000, taxDeducted: 200000, benefits: emptyBenefits, expenses: emptyExpenses },
+      ],
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      assertEq('totalIncome across employments', r.totalIncome, 5000000);
+      assertEq('taxAlreadyPaidTotal across employments', r.taxAlreadyPaidTotal, 600000);
+    },
+  },
+  {
+    name: 'Case 15: Payments on Account required (> £1,000 net unpaid tax)',
+    returnObj: {
+      id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+      clientId: 'client-15',
+      taxYear: '2025-26',
+      status: 'draft',
+      sa100: { taxAlreadyPaid: emptyTaxPaid, reliefs: emptyReliefs },
+      sa102: [{ employerName: 'Unpaid PAYE', grossPay: 8000000, taxDeducted: 0, benefits: emptyBenefits, expenses: emptyExpenses }],
+      updatedAt: new Date().toISOString(),
+    },
+    assertions: (r) => {
+      assertEq('paymentsOnAccountRequired', r.paymentsOnAccountRequired ? 1 : 0, 1);
+      assertEq('nextYearPaymentOnAccount', r.nextYearPaymentOnAccount, 971600); // 19,432 / 2
+    },
+  },
 ];
 
 function runTests() {

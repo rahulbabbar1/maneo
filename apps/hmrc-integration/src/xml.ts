@@ -30,7 +30,11 @@ function taxpayerStatus(region?: string): 'U' | 'S' | 'C' {
  * (enforced offline by the XSD validation gate in the test suite).
  */
 export function buildLegacySaXml(returnObj: Return, region?: string): string {
-  const utr = '1234567890'; // TODO: sourced from verified client record
+  // UTR must come from verified client record — never hardcoded.
+  const utr = returnObj.clientDetails?.utr;
+  if (!utr || !/^\d{10}$/.test(utr)) {
+    throw new Error('Cannot build HMRC XML: client UTR is missing or invalid. A valid 10-digit UTR is required.');
+  }
   const periodEnd = periodEndFor(returnObj.taxYear || '2025-26');
 
   // Verified figures from the deterministic engine (never hand-computed here).
@@ -38,10 +42,6 @@ export function buildLegacySaXml(returnObj: Return, region?: string): string {
     ? getConfig(returnObj.taxYear)
     : getConfig(Object.keys(CONFIGS).sort().reverse()[0]);
   const calc: any = computeFullReturn(returnObj, config);
-  const totalDuePence =
-    (calc?.incomeTax?.incomeTaxTotal || 0) +
-    (calc?.charges?.hicbcAmount || 0) -
-    (calc?.ftcr?.totalAllowedCredit || 0);
 
   const doc = create({ version: '1.0', encoding: 'UTF-8' });
   const gtm = doc.ele('GovTalkMessage', { xmlns: ENV_NS });
@@ -73,7 +73,75 @@ export function buildLegacySaXml(returnObj: Return, region?: string): string {
 
   // ── MTR body ──
   const mtr = irEnv.ele('MTR');
-  mtr.ele('SA100').ele('YourPersonalDetails').ele('TaxpayerStatus').txt(taxpayerStatus(region));
+
+  // SA100 — main return (required first).
+  const sa100 = mtr.ele('SA100');
+  const reliefs = returnObj.sa100?.reliefs || {};
+  sa100.ele('YourPersonalDetails').ele('TaxpayerStatus').txt(taxpayerStatus(region));
+
+  // YourTaxReturn checkboxes for present schedules.
+  const yourTaxReturn = sa100.ele('YourTaxReturn');
+  if ((returnObj.sa102 || []).length > 0) {
+    yourTaxReturn.ele('EmploymentSchedule').txt('yes');
+    yourTaxReturn.ele('NumberOfEmploymentSchedules').txt(String(returnObj.sa102.length));
+  }
+  if ((returnObj.sa106?.foreignIncome || []).length > 0) {
+    yourTaxReturn.ele('ForeignSchedule').txt('yes');
+  }
+  if ((returnObj.sa108?.disposals || []).length > 0) {
+    yourTaxReturn.ele('CapitalGainsSchedule').txt('yes');
+    yourTaxReturn.ele('CapitalGainsComputationAttached').txt('yes');
+  }
+  if (returnObj.sa109) {
+    yourTaxReturn.ele('ResidenceFIGschedule').txt('yes');
+  }
+
+  // Student Loan repayments (part of SA100).
+  const sl = returnObj.sa101?.studentLoan || returnObj.sa100?.reliefs && (returnObj.sa100 as any).studentLoan;
+  if (sl?.planType && sl.planType !== 'none') {
+    const slEl = sa100.ele('StudentLoanRepayments');
+    slEl.ele('IncomeContingentStudentLoanNotification').txt('yes');
+    if (sl.planType === 'postgraduate') {
+      slEl.ele('PostgraduateLoanPlanType').txt('03');
+    } else {
+      const planCode = sl.planType === 'plan_1' ? '01' : sl.planType === 'plan_2' ? '02' : '04';
+      slEl.ele('PlanType').txt(planCode);
+    }
+  }
+
+  // UK investment income (part of SA100).
+  if (returnObj.sa100?.income?.ukSavingsIncome || returnObj.sa100?.income?.ukDividendIncome) {
+    const inc = sa100.ele('Income');
+    const ukInterestDiv = inc.ele('UKInterestAndDividends');
+    if ((returnObj.sa100.income.ukSavingsIncome || 0) > 0) {
+      ukInterestDiv.ele('UntaxedUKinterestEtc').txt(money(returnObj.sa100.income.ukSavingsIncome));
+    }
+    if ((returnObj.sa100.income.ukDividendIncome || 0) > 0) {
+      ukInterestDiv.ele('CompanyDividends').txt(money(returnObj.sa100.income.ukDividendIncome));
+    }
+  }
+
+  // Tax Reliefs (part of SA100).
+  if (reliefs.giftAidGrossedUp || reliefs.relievablePensionContributions) {
+    const tr = sa100.ele('TaxReliefs');
+    if ((reliefs.relievablePensionContributions || 0) > 0) {
+      tr.ele('Pensions').ele('PaymentsToRegisteredPensionSchemes').txt(money(reliefs.relievablePensionContributions));
+    }
+    if ((reliefs.giftAidGrossedUp || 0) > 0) {
+      const netGiftAid = Math.round(reliefs.giftAidGrossedUp * 0.8);
+      tr.ele('CharitableGiving').ele('GiftAidPaymentsMadeInYear').txt(money(netGiftAid));
+    }
+  }
+
+  // High Income Child Benefit Charge (part of SA100).
+  const hicbc = returnObj.sa101?.highIncomeChildBenefitCharge || (returnObj.sa100 as any)?.highIncomeChildBenefitCharge;
+  if (hicbc?.benefitAmountReceived && hicbc.benefitAmountReceived > 0) {
+    const hc = sa100.ele('HighIncomeChildBenefitCharge');
+    hc.ele('AmountReceived').txt(money(hicbc.benefitAmountReceived));
+    if (hicbc.numberOfChildren > 0) {
+      hc.ele('NumberOfChildren').txt(String(hicbc.numberOfChildren));
+    }
+  }
 
   // SA102 — one per employment (schema allows up to 50).
   for (const job of returnObj.sa102 || []) {
@@ -85,7 +153,7 @@ export function buildLegacySaXml(returnObj: Return, region?: string): string {
     emp.ele('CompanyDirector').txt('no');
   }
 
-  // SA106 — foreign income (core differentiator). Grouped by income type.
+  // SA106 — foreign income. Grouped by income type.
   const foreign = returnObj.sa106?.foreignIncome || [];
   if (foreign.length) {
     const sa106 = mtr.ele('SA106');
@@ -107,20 +175,103 @@ export function buildLegacySaXml(returnObj: Return, region?: string): string {
     if (dividends.length) addSources(sa106.ele('OverseasDividendIncome'), dividends);
   }
 
-  // SA109 — residence & domicile (core differentiator).
+  // Helper for SA108 asset types
+  const buildAssetTypeNode = (parent: any, name: string, items: any[]) => {
+    if (items.length === 0) return;
+    const node = parent.ele(name);
+    let proceeds = 0;
+    let costs = 0;
+    let gains = 0;
+    let losses = 0;
+
+    for (const d of items) {
+      const gain = Math.max(0, (d.proceeds || 0) - (d.costs || 0));
+      const loss = Math.max(0, (d.costs || 0) - (d.proceeds || 0)) + (d.losses || 0);
+      proceeds += d.proceeds || 0;
+      costs += d.costs || 0;
+      gains += gain;
+      losses += loss;
+    }
+
+    node.ele('NumberOfDisposals').txt(String(items.length));
+    node.ele('DisposalProceeds').txt(money(proceeds));
+    node.ele('AllowableCosts').txt(money(costs));
+    const gainsEl = name === 'ResidentialPropertyAndCarriedInterest'
+      ? 'GainsOnResidentialPropertyInTheYear'
+      : 'GainsInTheYear';
+    node.ele(gainsEl).txt(money(gains));
+    node.ele('LossesInTheYear').txt(money(losses));
+  };
+
+  // SA108 — capital gains. Structured and grouped by asset type in schema order.
+  if (returnObj.sa108?.disposals?.length) {
+    const sa108 = mtr.ele('SA108');
+    const disposals = returnObj.sa108.disposals;
+
+    const residential = disposals.filter(d => d.assetType === 'residential_property');
+    const other = disposals.filter(d => d.assetType === 'other_property' || d.assetType === 'other');
+    const listed = disposals.filter(d => d.assetType === 'listed_shares');
+    const unlisted = disposals.filter(d => d.assetType === 'unlisted_shares');
+
+    buildAssetTypeNode(sa108, 'ResidentialPropertyAndCarriedInterest', residential);
+    buildAssetTypeNode(sa108, 'OtherPropertyAssetsAndGains', other);
+    buildAssetTypeNode(sa108, 'ListedSharesAndSecurities', listed);
+    buildAssetTypeNode(sa108, 'UnlistedSharesAndSecurities', unlisted);
+
+    // Losses and adjustments
+    const bfApplied = calc?.cgt?.broughtForwardLossesApplied || 0;
+    const badrGains = disposals
+      .filter(d => d.claimBadr)
+      .reduce((sum, d) => sum + Math.max(0, (d.proceeds || 0) - (d.costs || 0)), 0);
+
+    let totalInYearLosses = 0;
+    let totalInYearGains = 0;
+    for (const d of disposals) {
+      const gain = Math.max(0, (d.proceeds || 0) - (d.costs || 0));
+      const loss = Math.max(0, (d.costs || 0) - (d.proceeds || 0)) + (d.losses || 0);
+      totalInYearGains += gain;
+      totalInYearLosses += loss;
+    }
+
+    const unusedInYearLosses = Math.max(0, totalInYearLosses - totalInYearGains);
+    const unusedBfLosses = Math.max(0, (returnObj.sa108.broughtForwardLosses || 0) - bfApplied);
+    const lossesCarriedForward = unusedInYearLosses + unusedBfLosses;
+
+    if (bfApplied > 0 || lossesCarriedForward > 0 || badrGains > 0) {
+      const la = sa108.ele('LossesAndAdjustments');
+      if (bfApplied > 0) la.ele('LossesBroughtForwardAndUsedInTheReturnYear').txt(money(bfApplied));
+      if (lossesCarriedForward > 0) la.ele('LossesToBeCarriedForward').txt(money(lossesCarriedForward));
+      if (badrGains > 0) la.ele('GainsQualifyingForBusinessAssetDisposalRelief').txt(money(badrGains));
+    }
+  }
+
+  // SA109 — residence & domicile.
   if (returnObj.sa109) {
     const s = returnObj.sa109.residenceStatus;
     const sa109 = mtr.ele('SA109');
-    if (s.srtResult === 'non_resident' || s.srtResult === 'split_year') {
-      const rs = sa109.ele('ResidenceStatus');
-      if (s.srtResult === 'non_resident') rs.ele('NotResidentInUK').txt('yes');
-      if (s.srtResult === 'split_year') rs.ele('RequestForSplitYearTreatment').txt('yes');
+    const rs = sa109.ele('ResidenceStatus');
+    if (s.srtResult === 'non_resident') {
+      rs.ele('NotResidentInUK').txt('yes');
+    }
+    if (s.srtResult === 'split_year') {
+      rs.ele('RequestForSplitYearTreatment').txt('yes');
+      const date = calc?.splitDate || s.arrivalDate || s.departureDate;
+      if (date) {
+        rs.ele('SplitYearTreatmentDateFromWhichTheUKpartYearBeginsOrEnds').txt(date);
+      }
     }
     const t = sa109.ele('TimeSpentInUK');
     t.ele('NumberOfDaysSpentInUK').txt(String(Math.min(s.daysInUk ?? 0, 366)));
   }
 
-  // SA110 — tax calculation summary (required).
+  // SA110 — tax calculation summary.
+  const totalDuePence =
+    (calc?.incomeTax?.incomeTaxTotal || 0) +
+    (calc?.cgt?.totalCgtDue || 0) +
+    (calc?.charges?.hicbcAmount || 0) +
+    (calc?.charges?.studentLoanBalanceDue || 0) -
+    (calc?.ftcr?.totalAllowedCredit || 0);
+
   const sa110 = mtr.ele('SA110');
   sa110.ele('SelfAssessment').ele('TotalTaxEtcDue').txt(money(totalDuePence));
   sa110.ele('UnderpaidTax');

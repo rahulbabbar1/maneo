@@ -31,6 +31,15 @@ jobs:
       - name: Run Deterministic Unit Tests
         run: npm run test
 
+      - name: Run MTR Reconciliation Harness (external truth)
+        run: npx tsx packages/tax-core/src/run-mtr-harness.ts
+
+      - name: Verify HMRC Config Constants (2024-25)
+        run: npx tsx packages/tax-config/src/verify-hmrc-2024-25.ts
+
+      - name: Verify HMRC Config Constants (2025-26)
+        run: npx tsx packages/tax-config/src/verify-hmrc-2025-26.ts
+
       - name: Authenticate with Google Cloud
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: google-github-actions/auth@v2
@@ -85,7 +94,7 @@ jobs:
             --image europe-west2-docker.pkg.dev/uk-self-assessment/cloud-run-source-deploy/uk-sa-orchestrator:${{ github.sha }} \
             --region europe-west2 \
             --platform managed \
-            --allow-unauthenticated
+            --no-allow-unauthenticated
 
       - name: Verify Live Online Deployment
         run: |
