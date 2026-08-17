@@ -259,10 +259,16 @@ export default function App() {
         const lower = data.reply.toLowerCase();
         if (currentPhase === 0 && (lower.includes('residence') || lower.includes('days in the uk'))) {
           setCurrentPhase(1);
-        } else if (currentPhase === 1 && (lower.includes('income') || lower.includes('employment') || lower.includes('p60'))) {
+        } else if (currentPhase === 1 && (lower.includes('income') || lower.includes('employment') || lower.includes('p60') || lower.includes('foreign') || lower.includes('gains'))) {
           setCurrentPhase(2);
-        } else if (currentPhase === 2 && (lower.includes('relief') || lower.includes('credit') || lower.includes('ftcr'))) {
+        } else if (currentPhase === 2 && (lower.includes('relief') || lower.includes('credit') || lower.includes('ftcr') || lower.includes('pension') || lower.includes('gift aid'))) {
           setCurrentPhase(3);
+        } else if (currentPhase === 3 && (lower.includes('review') || lower.includes('looks correct') || lower.includes('summary') || lower.includes('computation'))) {
+          setCurrentPhase(4);
+        } else if (currentPhase === 4 && (lower.includes('declare') || lower.includes('confirm') || lower.includes('declaration'))) {
+          setCurrentPhase(5);
+        } else if (currentPhase === 5 && (lower.includes('submit') || lower.includes('filed') || lower.includes('success') || lower.includes('receipt') || lower.includes('complete'))) {
+          setCurrentPhase(6);
         }
       }
     } catch {
